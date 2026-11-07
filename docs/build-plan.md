@@ -17,7 +17,21 @@
 | 4 | Idea lab: self-improving loop, conviction-bet debate, stage gates | ⬜ Not started | | |
 | 5 | Operate 1–2+ months, review, tune | ⬜ Not started | | |
 
-**The 1–2 month paper-trading clock starts at the end of Phase 2.** Phases 3–4 are built while it runs.
+**Re-plan (2026-11-07, user's direction):** the goal for the next few months is **understanding the market** and a system
+that can try many kinds of strategies, not rushing price-only rules into paper trading. First train results showed
+price-only rules have little edge (only momentum predicts, ~+1.5% vs other stocks over 3 months). So the order is now:
+
+| Step | What | From |
+|---|---|---|
+| **A** ✅ | Claude runner + **news understanding**: Haiku reads every headline (company, event type, direction, importance); daily per-stock news sentiment and event log. Built 2026-11-07: `core/ai/claude.py`, `news.triage` every 30 min (+ hourly backlog), `news_events`, news features | Phase 3.1–3.2 |
+| **B** | **Memory + daily market analysis**: market/theme/stock journals, Opus 9 pm analysis for learning, predictions log (scored automatically) | Phase 3.6b |
+| **C** | **Economy map**: themes (AI capex, rates, oil, consumer…), company links (customers/suppliers from 10-Ks), theme strength over time | Phase 3.3–3.4 |
+| **D** | **Strategy lab, all kinds**, in the order the research suggests (learning/12): insider cluster buying · earnings surprise + momentum + 52-week high · weekly news tone (word list on 2019–25; Haiku forward) · quality filter · Claude reading earnings calls/guidance (forward) · analyst revisions (once snapshots accumulate) · supplier links (with C). Macro = risk dial, not picker | Phase 2.2 + 4 |
+| **E** | Planner + Alpaca paper execution + approvals, trading whatever passes the gates | Phase 2.3–2.9 |
+
+AI story-based calls can't be backtested honestly (Claude already knows how 2016–2025 turned out), so they're tested
+**forward** through the predictions log and paper trading. Text signals for history use methods that don't know the
+future (word lists, the market's own reaction).
 
 Legend: ⬜ not started · 🟡 in progress · ✅ done · ⏸ blocked
 
@@ -320,3 +334,4 @@ daily, and limits/failures defer cleanly.
 | 2026-11-06 | Dashboard reachable from other Tailscale devices at **http://ichigo:8090** (also `http://ichigo.saanen-shark.ts.net:8090`, `http://100.85.155.36:8090`): it listens on localhost + the Tailscale address only (`dashboard.tailnet_hosts`), not on the Wi-Fi; if Tailscale isn't up at login it starts on localhost and adds the address when it appears. The user's existing `tailscale serve` / Funnel setup (ports 443 and 8443 → other local apps) was left untouched. |
 | 2026-11-06 | SEC backfill finished: 5,326 companies, 2.43M filings, 3.02M financial facts, 0 skipped; 5,246 / 5,431 stocks now have a sector. First backup: 0.76 GB. **Alpha Vantage** (free key) tested: earnings history with estimates since 1996, full calendar in 1 call, estimate revisions, transcripts free; news sentiment is premium. 25 requests/day. |
 | 2026-11-07 | **Features + market snapshot (2.1, 2.1b).** `features_daily` 2024→today; first snapshot (Nov 6): *Mixed: S&P 500 uptrend, only 45% of stocks above their 200-day average, risk-off* → exposure 50%; tech lagging (XLK −17% in a month), healthcare/staples/real estate leading. Earnings calendars (AV 1,983 + Finnhub 2,301 reports), AV earnings history for 17 largest stocks, 23 FRED series (33k observations). Fixes: (1) ETFs/ETNs/commodity and currency trusts that SEC lists as companies (QQQ, MicroSectors ETNs, Sprott trusts, CurrencyShares…) were counted as common stock → classifier patterns + reference ETFs always "etf"; universe now 5,364 companies + 65 ETFs (SPCX is SpaceX, correctly common). (2) Feature backfill memory: 500-column chunks and 20-day write batches (~1.2 GB peak). Learning: `11-our-daily-numbers.md`. |
+| 2026-11-07 | **Re-plan (user):** understanding first, all kinds of strategies, no rush to paper trade. First train results: no price-only strategy passes; signal study shows only momentum predicts (+1.5% vs pool at 60 days, stops cut it short). Research agent → `learning/12` (ranked shortlist: insiders, earnings surprise + momentum, weekly news tone, quality, Claude on calls forward, revisions). **Step A done:** Claude runner (headless `claude -p`, custom short system prompt, JSON schema, usage log `ai_usage`, per-model daily budget, limits → pause), Haiku news triage (100 headlines ≈ 45–110 s ≈ $0.01 equiv; ~3,200/day), news features (count, net tone, major event over 5 days). Works from the launchd daemon (no keychain problem). |

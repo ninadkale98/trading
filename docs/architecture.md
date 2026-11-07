@@ -716,6 +716,8 @@ trading/
 
 The detailed, step-by-step checklist with progress tracking is in **[build-plan.md](build-plan.md)**.
 
+**Order changed 2026-11-07:** understanding first (news and sentiment, memory and daily market analysis, economy map, a lab for all kinds of strategies), then paper-trading execution. See the re-plan table in build-plan.md.
+
 | Phase | Build | Result |
 |---|---|---|
 | 1 | PostgreSQL, task queue and scheduler, data loaders (Alpaca prices and news, EDGAR), point-in-time storage, backtester | Can test any idea honestly; data stays up to date |

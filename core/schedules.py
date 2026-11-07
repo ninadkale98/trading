@@ -35,6 +35,11 @@ SCHEDULES: list[dict] = [
      "priority": 25, "resource": "finnhub", "expires_minutes": 1440},
     {"name": "macro_update", "task_type": "macro.update", "cron": f"5 9,18 * * {WEEKDAYS}",          # after 8:30 am releases; evening catch-up
      "priority": 50, "resource": "fred", "expires_minutes": 360},
+    # ── Re-plan step A: news understanding (Haiku) ──
+    {"name": "news_triage", "task_type": "news.triage", "cron": "7,37 * * * *", "payload": {"days": 3, "max_items": 2000},
+     "priority": 62, "resource": "claude:haiku", "expires_minutes": 25},
+    {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # older news, with leftover daily budget
+     "payload": {"days": 90, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},
     {"name": "backup_nightly", "task_type": "system.backup", "cron": "0 2 * * *",
      "priority": 20, "expires_minutes": 600},
 ]

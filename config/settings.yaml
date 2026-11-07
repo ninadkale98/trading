@@ -36,6 +36,11 @@ retry:
 features:
   store_from: "2024-01-01"        # features are stored from here on; older dates are recomputed on demand (backtests)
 
+ai:
+  # Daily caps for BACKGROUND jobs, in pay-per-use-equivalent dollars (a usage meter; the Max plan itself is flat-rate).
+  # Keeps room in the plan for the user's own chats. Tune after a week of real usage (dashboard → Live).
+  daily_budget_usd_equiv: {haiku: 3.0, sonnet: 8.0, opus: 6.0}
+
 dashboard:
   host: "127.0.0.1"               # local only; open through VS Code port forwarding
   port: 8090

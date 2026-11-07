@@ -9,10 +9,10 @@ import pandas as pd
 
 from core.backtest.data import Market, load
 from core.db import conn, query
-from core.features import earnings, fundamentals, price
+from core.features import earnings, fundamentals, news, price
 
-COLUMNS = list(price.FEATURES) + list(earnings.FEATURES) + list(fundamentals.FEATURES)
-INT_COLUMNS = price.INT_FEATURES | earnings.INT_FEATURES | fundamentals.INT_FEATURES
+COLUMNS = list(price.FEATURES) + list(earnings.FEATURES) + list(fundamentals.FEATURES) + list(news.FEATURES)
+INT_COLUMNS = price.INT_FEATURES | earnings.INT_FEATURES | fundamentals.INT_FEATURES | news.INT_FEATURES
 LOOKBACK_DAYS = 460          # calendar days of history needed before the first output date (252-day windows + slack)
 
 
@@ -46,6 +46,7 @@ def features_for_market(m: Market, fundamentals_too: bool = True) -> dict[str, n
     if fundamentals_too:
         ciks = {s: int(c) for s, c, common in zip(m.symbols, info["cik"], m.is_common) if common and pd.notna(c)}
         feats.update(fundamentals.compute(m, ciks))
+    feats.update(news.compute(m))
     return feats
 
 
