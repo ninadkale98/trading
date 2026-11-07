@@ -1,6 +1,6 @@
 {
   "symbol": "SHOP",
-  "range": "1y",
+  "range": "6mo",
   "interval": "1d",
   "indicators": [
     "sma50",

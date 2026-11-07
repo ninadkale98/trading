@@ -189,9 +189,15 @@ const views = {
       <td class="num">${num(b.shares)}</td><td class="num">${money(b.entry_price)}</td><td class="num">${money(b.last)}</td>
       <td class="num ${cls(r)}">${pct(r * 100, 1)}<div class="small muted">SPY ${spy == null ? "—" : pct(spy * 100, 1)}</div></td>
       <td class="num">${money(b.stop)}${b.trail_pct ? `<div class="small muted">trails ${num(b.trail_pct * 100, 0)}%</div>` : ""}</td></tr>`; });
-    const closed = d.closed.map((c) => `<tr><td><b>${esc(c.symbol)}</b><div class="small muted">${esc(c.strategy)}</div></td>
+    const closed = d.closed.map((c) => { const r = c.exit_price / c.entry_price - 1, spy = c.spy_entry && c.spy_exit ? c.spy_exit / c.spy_entry - 1 : null;
+      const ctx = c.entry_context || {}, f = ctx.features || {};
+      return `<tr><td><b>${esc(c.symbol)}</b><div class="small muted">${esc(c.strategy)}</div></td>
       <td class="small">${esc(c.entry_date)} → ${esc(c.exit_date)}</td><td class="num ${cls(c.pnl)}">${money(c.pnl, 0)}</td>
-      <td class="num ${cls(c.exit_price / c.entry_price - 1)}">${pct((c.exit_price / c.entry_price - 1) * 100, 1)}</td><td class="small">${esc(c.exit_reason)}</td></tr>`);
+      <td class="num ${cls(r)}">${pct(r * 100, 1)}<div class="small muted">SPY ${spy == null ? "—" : pct(spy * 100, 1)}</div></td>
+      <td class="num small">best ${c.mfe == null ? "—" : pct(c.mfe * 100, 1)}<br>worst ${c.mae == null ? "—" : pct(c.mae * 100, 1)}</td>
+      <td class="small">${esc(c.exit_reason)}<details><summary>context</summary><div class="small">Market: ${esc((ctx.market || {}).regime || "")}<br>
+        RS ${esc(f.rs_rank ?? "—")} · trend ${esc(f.trend_score ?? "—")} · RSI ${esc(f.rsi14 ?? "—")} · news score ${esc(f.news_score_5d ?? "—")}<br>
+        ${(ctx.news || []).map((n) => esc(n.headline)).join("<br>")}</div></details></td></tr>`; });
     const stats = d.stats.map((s) => `<tr><td>${esc(s.strategy)}</td><td class="num">${num(s.n)}</td><td class="num">${num(s.win * 100, 0)}%</td>
       <td class="num ${cls(s.avg_ret)}">${pct(s.avg_ret * 100, 2)}</td><td class="num ${cls(s.pnl)}">${money(s.pnl, 0)}</td></tr>`);
     const cands = d.candidates.map((c) => `<tr><td>${esc(c.strategy)}</td><td><b>${esc(c.symbol)}</b></td><td class="num">${money(c.close)}</td>
@@ -205,7 +211,8 @@ const views = {
       <div class="card"><h2>Plans</h2>${table(["Session", "Side", "Stock", "#Shares", "#Limit", "#Stop", "#Value", "Status"], plans, "No plans yet: the first are made after Monday's close.")}</div>
       <div class="card"><h2>Open positions</h2>${table(["Stock", "Since", "#Shares", "#Entry", "#Last", "#Return", "#Stop"], book, "None yet.")}</div>
       <div class="card"><h2>By strategy (closed trades)</h2>${table(["Strategy", "#Trades", "#Win rate", "#Avg return", "#P&L"], stats, "No closed trades yet.")}</div>
-      <div class="card"><h2>Closed trades</h2>${table(["Stock", "Held", "#P&L", "#Return", "Exit"], closed, "None yet.")}</div>
+      <div class="card"><h2>Closed trades</h2>${table(["Stock", "Held", "#P&L", "#Return", "#Best / worst", "Exit"], closed, "None yet.")}</div>
+      <div class="card md"><h2>Weekly trade reviews (Opus, Saturdays)</h2>${(d.reviews || []).map((r) => `<details><summary>Week of ${esc(r.week_start)}</summary>${md(r.review_md)}</details>`).join("") || '<p class="muted">The first review runs Saturday after the first trades.</p>'}</div>
       <div class="card"><details><summary>Candidates on ${esc(d.candidates_date || "—")}</summary>${table(["Strategy", "Stock", "#Close", "#Stop", "#Score"], cands)}</details></div>`;
   },
 

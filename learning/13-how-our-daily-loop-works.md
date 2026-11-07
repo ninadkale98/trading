@@ -36,6 +36,19 @@ All times are New York time (ET). Everything runs by itself on ichigo. The dashb
   earnings will need your approval for that.
 - Earnings headlines are read by Haiku as they come out, and Opus covers the important reports in the 9 pm analysis.
 
+## The trade journal (for learning)
+Every trade, simulated or paper, is recorded with:
+- **Entry context:** why the strategy picked it, the stock's numbers that day (trend, RSI, strength rank, news tone,
+  earnings timing, fundamentals), the market regime, and the week's top news about it.
+- **Best and worst point while held** ("MFE" and "MAE"): e.g. a trade stopped out at −8% that first went +12% says the
+  exit rules gave back a winner; one that dipped −7.9% and then rose says the stop was too tight.
+- **Exit context:** the reason (stop, target, time, strategy signal, earnings), the numbers that day, and SPY's move over
+  the same period.
+
+**Every Saturday** Opus reviews the week's trades with all of this, writes what worked and what didn't, and adds concrete,
+testable lessons to the lab notebook (`lab/notebook.md`). The idea lab reads it before proposing the next experiments.
+See it on the Trading page.
+
 ## Predictions
 Opus writes 2–5 predictions a day that a computer can check, for example "Healthcare (XLV) will beat SPY over the
 next 20 trading days, 57%". When the time is up they're scored automatically. Over weeks this shows whether the

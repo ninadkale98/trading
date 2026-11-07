@@ -218,8 +218,9 @@ def trading():
     stats = query("""SELECT strategy, count(*) n, sum(pnl) pnl, avg((pnl > 0)::int) win,
                             avg(exit_price / entry_price - 1) avg_ret FROM positions_book
                      WHERE mode=%s AND status='closed' GROUP BY strategy ORDER BY strategy""", (md_,))
+    reviews = query("SELECT week_start, review_md, lessons FROM trade_reviews ORDER BY week_start DESC LIMIT 8")
     return {"mode": md_, "plans": plans, "book": book, "closed": closed, "candidates": cands, "candidates_date": last_c,
-            "stats": stats}
+            "stats": stats, "reviews": reviews}
 
 
 @app.get("/api/journal")

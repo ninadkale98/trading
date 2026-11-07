@@ -18,6 +18,8 @@ ET = ZoneInfo("America/New_York")
 def eod(ctx: TaskContext) -> dict:
     day = query("SELECT max(date) d FROM daily_prices WHERE symbol='SPY'")[0]["d"]
     r = ex.simulate_session(day) if ex.mode() == "dry_run" else ex.sync_paper(day)
+    from core.execution.journal import update_excursions
+    r["excursions_updated"] = update_excursions(ex.mode(), day)
     queue.enqueue("strategies.plan", {}, priority=55, dedupe_key="strategies.plan")
     return {"summary": f"session {day} settled ({ex.mode()}): {r}", **r}
 

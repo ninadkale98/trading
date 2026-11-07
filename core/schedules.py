@@ -56,6 +56,8 @@ SCHEDULES: list[dict] = [
      "priority": 60, "expires_minutes": 600},
     {"name": "briefing_morning", "task_type": "briefing.daily", "cron": f"30 6 * * {WEEKDAYS}",   # refresh with overnight changes
      "priority": 60, "expires_minutes": 120},
+    {"name": "trade_review_weekly", "task_type": "review.weekly_trades", "cron": "0 10 * * 6",
+     "priority": 40, "resource": "claude:opus", "expires_minutes": 1440},
     {"name": "backup_nightly", "task_type": "system.backup", "cron": "0 2 * * *",
      "priority": 20, "expires_minutes": 600},
 ]

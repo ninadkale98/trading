@@ -56,6 +56,9 @@ def test_dry_run_fills_stops_and_gaps():
     book = {b["symbol"]: b for b in query("SELECT * FROM positions_book")}
     assert book["AAA"]["status"] == "open" and abs(book["AAA"]["entry_price"] - 10.005) < 1e-3   # open + 5 bps cost
     assert book["CCC"]["exit_reason"] == "stop" and book["CCC"]["pnl"] < 0
+    assert book["AAA"]["entry_context"]["strategy"] == "test"                       # context saved for later review
+    assert book["CCC"]["exit_context"]["reason"] == "stop"
+    assert abs(book["CCC"]["mae"] - (27.0 / book["CCC"]["entry_price"] - 1)) < 1e-6   # worst point while held
     _bar("AAA", D1, 8.5, 8.8, 8.4, 8.6)          # gaps below the 9.00 stop → filled at the open, not at the stop
     simulate_session(D1)
     a = query("SELECT * FROM positions_book WHERE symbol='AAA'")[0]

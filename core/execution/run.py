@@ -14,6 +14,7 @@ from datetime import date
 from core.config import settings
 from core.db import conn, query
 from core.ingest import alpaca
+from core.execution.journal import entry_context, exit_context, update_excursions
 from core.log import event
 
 COST_BPS = {"liquid": 5.0, "thin": 15.0, "emerging": 40.0}
@@ -34,11 +35,15 @@ def _spy(day: date) -> float | None:
     return float(r[0]["close"]) if r else None
 
 
-def _close_position(c, b: dict, day: date, price: float, reason: str) -> float:
-    fill = price * (1 - COST_BPS[_tier(b["symbol"])] / 1e4)
+def _close_position(c, b: dict, day: date, price: float, reason: str, cost: bool = True) -> float:
+    fill = price * (1 - COST_BPS[_tier(b["symbol"])] / 1e4) if cost else price
     pnl = (fill - b["entry_price"]) * b["shares"]
-    c.execute("UPDATE positions_book SET status='closed', exit_date=%s, exit_price=%s, exit_reason=%s, pnl=%s WHERE id=%s",
-              (day, fill, reason, pnl, b["id"]))
+    hi_lo = c.execute("SELECT max(high) hi, min(low) lo FROM daily_prices WHERE symbol=%s AND date BETWEEN %s AND %s",
+                      (b["symbol"], b["entry_date"], day)).fetchone()
+    c.execute("""UPDATE positions_book SET status='closed', exit_date=%s, exit_price=%s, exit_reason=%s, pnl=%s, spy_exit=%s,
+                   exit_context=%s, mfe=COALESCE(%s / entry_price - 1, mfe), mae=COALESCE(%s / entry_price - 1, mae) WHERE id=%s""",
+              (day, fill, reason, pnl, _spy(day), exit_context(b["symbol"], day, reason),
+               max(hi_lo["hi"] or 0, price) if hi_lo else None, min(hi_lo["lo"] or price, price) if hi_lo else None, b["id"]))
     return pnl
 
 
@@ -71,10 +76,10 @@ def simulate_session(day: date) -> dict:
             c.execute("UPDATE trade_plans SET status='simulated', fill_price=%s, filled_shares=%s, updated_at=now() WHERE id=%s",
                       (fill, p["shares"], p["id"]))
             c.execute("""INSERT INTO positions_book (mode, plan_id, strategy, symbol, shares, entry_date, entry_price, stop, target,
-                                                     trail_pct, high_close, max_hold, spy_entry)
-                         VALUES ('dry_run',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                                                     trail_pct, high_close, max_hold, spy_entry, entry_context)
+                         VALUES ('dry_run',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
                       (p["id"], p["strategy"], p["symbol"], p["shares"], day, fill, p["stop"], p["target"], p["trail_pct"],
-                       fill, p["max_hold"], _spy(day)))
+                       fill, p["max_hold"], _spy(day), entry_context(p)))
             filled += 1
         # stops and targets during the day (entries made today included, like the backtester)
         for b in c.execute("SELECT * FROM positions_book WHERE mode='dry_run' AND status='open'").fetchall():  # same transaction: sees today's entries
@@ -137,16 +142,15 @@ def sync_paper(day: date) -> dict:
                 if st == "filled" and p["side"] == "buy":
                     stop_leg = next((leg for leg in (o.get("legs") or []) if leg.get("type") in ("stop", "stop_limit")), None)
                     c.execute("""INSERT INTO positions_book (mode, plan_id, strategy, symbol, shares, entry_date, entry_price, stop,
-                                     target, trail_pct, high_close, max_hold, spy_entry, stop_order_id, broker_stop)
-                                 VALUES ('paper',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
+                                     target, trail_pct, high_close, max_hold, spy_entry, stop_order_id, broker_stop, entry_context)
+                                 VALUES ('paper',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING""",
                               (p["id"], p["strategy"], p["symbol"], qty, day, px, p["stop"], p["target"], p["trail_pct"], px,
-                               p["max_hold"], _spy(day), stop_leg["id"] if stop_leg else None, p["stop"]))
+                               p["max_hold"], _spy(day), stop_leg["id"] if stop_leg else None, p["stop"], entry_context(p)))
                     fills += 1
                 elif st == "filled" and p["side"] == "sell":
-                    for b in query("SELECT * FROM positions_book WHERE mode='paper' AND symbol=%s AND status='open'", (p["symbol"],)):
-                        pnl = (px - b["entry_price"]) * b["shares"]
-                        c.execute("UPDATE positions_book SET status='closed', exit_date=%s, exit_price=%s, exit_reason=%s, pnl=%s "
-                                  "WHERE id=%s", (day, px, p["reason"] or "exit plan", pnl, b["id"]))
+                    for b in c.execute("SELECT * FROM positions_book WHERE mode='paper' AND symbol=%s AND status='open'",
+                                       (p["symbol"],)).fetchall():
+                        _close_position(c, b, day, px, p["reason"] or "exit plan", cost=False)
                         closes += 1
             elif st in ("canceled", "expired", "rejected"):
                 c.execute("UPDATE trade_plans SET status=%s, error=%s, updated_at=now() WHERE id=%s",
@@ -158,8 +162,7 @@ def sync_paper(day: date) -> dict:
                 sells = [a for a in acts if a["symbol"] == b["symbol"] and a["side"] == "sell"]
                 px = float(sells[0]["price"]) if sells else float(b["stop"])
                 reason = "stop" if px <= (b["broker_stop"] or b["stop"]) * 1.001 else "target"
-                c.execute("UPDATE positions_book SET status='closed', exit_date=%s, exit_price=%s, exit_reason=%s, pnl=%s WHERE id=%s",
-                          (day, px, reason, (px - b["entry_price"]) * b["shares"], b["id"]))
+                _close_position(c, b, day, px, reason, cost=False)
                 closes += 1
             elif b["stop_order_id"] and b["stop"] > (b["broker_stop"] or 0) + 0.005:
                 try:
