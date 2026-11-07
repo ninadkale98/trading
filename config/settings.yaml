@@ -28,3 +28,7 @@ workers:
 retry:
   backoff_seconds: [60, 300, 900, 3600, 10800]   # 1m, 5m, 15m, 1h, 3h
   max_attempts: 6
+
+dashboard:
+  host: "127.0.0.1"               # local only; open through VS Code port forwarding
+  port: 8090

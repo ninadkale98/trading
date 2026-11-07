@@ -152,6 +152,23 @@ def test_scheduler_catch_up_window():
     assert query("SELECT count(*) n FROM tasks WHERE dedupe_key LIKE 'sched:t_daily:%%'")[0]["n"] == 1
 
 
+def test_scheduler_sync_accepts_payloads_and_real_schedules():
+    """Regression: a schedule with a payload dict crashed sync() and silently killed the scheduler thread."""
+    from core.db import query
+    from core.schedules import SCHEDULES
+    from core.tasks import scheduler
+    scheduler.sync([{"name": "t_payload", "task_type": "system.noop", "cron": "0 3 5 * *", "payload": {"from": "2016q1"}}])
+    assert query("SELECT payload FROM schedules WHERE name='t_payload'")[0]["payload"] == {"from": "2016q1"}
+    scheduler.sync(SCHEDULES)   # the real definitions must sync cleanly
+    assert query("SELECT count(*) n FROM schedules WHERE enabled")[0]["n"] == len(SCHEDULES)
+
+
+def test_cron_next_due():
+    from core.tasks import cron
+    nxt = cron.next_due("40 16 * * 1-5", datetime(2026, 11, 6, 17, 0))   # Friday after the run → Monday
+    assert nxt == datetime(2026, 11, 9, 16, 40)
+
+
 def test_alpaca_timestamps_are_utc():
     from datetime import datetime, timezone, timedelta
     from core.ingest.alpaca import _iso

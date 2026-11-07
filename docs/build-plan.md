@@ -12,8 +12,8 @@
 |---|---|---|---|---|
 | 0 | Prerequisites (disk space, PostgreSQL, settings) | ✅ Done | 2026-11-06 | 2026-11-06 |
 | 1 | Foundation: database, task system, data loaders, backtester | 🟡 Code done; historical backfills running | 2026-11-06 | |
-| 2 | Paper-trading MVP: features, strategies, planner, Alpaca execution, approvals, briefing, basic dashboard | ⬜ Not started | | |
-| 3 | Knowledge layer and AI agents: graph, claims, company maps, research queue, Opus plan and summary | ⬜ Not started | | |
+| 2 | Paper-trading MVP: features, strategies, planner, Alpaca execution, approvals, briefing, basic dashboard | 🟡 Dashboard v1 running | 2026-11-06 | |
+| 3 | Knowledge layer and AI agents: graph, claims, company maps, research queue, memory + AI search, Opus plan, summary and daily market analysis, study of big moves | ⬜ Not started | | |
 | 4 | Idea lab: self-improving loop, conviction-bet debate, stage gates | ⬜ Not started | | |
 | 5 | Operate 1–2+ months, review, tune | ⬜ Not started | | |
 
@@ -131,6 +131,13 @@ and gives the user a daily briefing and a basic dashboard.
 - [ ] Trend, momentum, RSI, ATR, relative volume, OBV/accumulation, 52-week distance, gaps
 - [ ] Earnings surprise/guidance (where available), revenue and margin growth, valuation, insider net buying
 - [ ] Sector and market relative strength; days to next earnings
+- [ ] Finnhub company news (daily, active stocks) and GDELT theme volume/tone (daily)
+- [ ] Finnhub loader: daily snapshot of the earnings calendar with estimates (builds our own estimate history), last-4-quarter surprises, monthly analyst rating counts, peers
+
+### 2.1b Market snapshot (architecture §5.6)
+- [ ] Add cross-asset, global, style and theme ETFs to the reference symbols; backfill their history
+- [ ] FRED macro loader (rates, inflation, jobs, yields, credit spreads), point-in-time via FRED vintage dates (key in `.env` as `FRED_API_KEY`, verified 2026-11-06)
+- [ ] Daily `market_snapshot`: breadth, sector/theme rotation map, style, cross-asset, global, leaders, regime label
 
 ### 2.2 Strategies (plug-in interface, architecture §8)
 - [ ] Interface + loader for `strategies/{promoted,paper,experimental,retired}`
@@ -169,8 +176,13 @@ and gives the user a daily briefing and a basic dashboard.
 - [ ] Sections: day in 5 lines · decisions needed · top findings · portfolio vs SPY · learned · tomorrow
 
 ### 2.8 Dashboard v1 (FastAPI, light theme, phone-friendly)
-- [ ] **Review** (briefing + approval queue with buttons), **Live**, **Today**, **Portfolio**, **Health**
-- [ ] Served on ichigo; opened via VS Code port forwarding (`localhost:8080`)
+- [x] Pages: **Review** (needs-attention list, briefing and approvals placeholders until 2.6/2.7, last 24 h), **Live** (running
+      jobs with progress, queue grouped by job, schedule with next/last run + "Run now", pause/resume sources), **Today**
+      (timeline, any day), **Portfolio** (Alpaca paper account, positions, orders, account vs SPY), **Data** (coverage,
+      liquidity tiers, sectors), **Health** (data freshness vs trading calendar, failed/retrying jobs with Retry, errors, disk)
+- [x] Served on ichigo by launchd agent `com.ninad.tradebot.dashboard` (`tradebot dashboard`); **`localhost:8090`** (8080 is
+      taken by another local project) via VS Code port forwarding; no-cache headers so updates show on refresh; 12 tests
+- [ ] Approval queue with buttons (with 2.6), briefing rendering (with 2.7), Market page (with 2.1b), phone-width check by the user
 
 ### 2.9 Go-live
 - [ ] **Dry run 3–5 trading days:** plans and briefings only, no orders; fix issues
@@ -209,7 +221,21 @@ with zero crashes and every failure visible on the Health page.
 - [ ] 6:00 am morning plan (may trim/cancel only); 9:00 pm summary + new ideas; briefing v2 written with Opus input
 
 ### 3.6 Similar past situations
-- [ ] pgvector event fingerprints; "this looks like…" lookups in research and briefings
+- [ ] pgvector numeric fingerprints (feature vectors, no language model); "this looks like…" lookups in research and briefings
+
+### 3.6b Memory and AI search toolkit (architecture §5.5)
+- [ ] `market_days`, `theme_days`, `stock_timeline`, `journal_rollups`, `predictions` tables
+- [ ] Read-only database user + `tradebot memory / search / sql` commands with `--as-of`; PostgreSQL full-text search over
+      news, transcripts, journals, company maps, claims
+- [ ] Market pack builder (~30–60k tokens) for Opus
+- [ ] **Opus daily market analysis** (9 pm) → `reports/market/` + market journal; predictions written and auto-scored
+- [ ] Saturday weekly roll-up + **weekly money-flow map**; monthly and quarterly chapters
+- [ ] One-time catch-up: quarterly chapters 2016 → today from stored prices and news (spare plan capacity)
+- [ ] Budget scheduler fills unused capacity in each 5-hour window with low-priority work
+
+### 3.6c Study of big moves v1 (architecture §9)
+- [ ] Find big winners/losers since 2016; snapshot what was knowable before; compare with look-alikes that didn't move
+- [ ] Base-rate report; case studies of recent winners (labeled hindsight)
 
 ### 3.7 Dashboard: Knowledge and Market pages
 - [ ] Graph explorer (see architecture §5.4), company maps, changelog; sector heat map, big moves with causes
@@ -231,6 +257,7 @@ daily, and limits/failures defer cleanly.
 - [ ] **Conviction bets:** Opus proposer → Sonnet skeptic (bear-side data) → **user approval** → tracked as its own record;
       allowance grows or shrinks with results
 - [ ] Performance-decay monitor; retirement
+- [ ] Study of big moves feeds idea proposals automatically; daily "matches a winner profile" watch list, outcomes recorded
 - [ ] Weekly picks, monthly scorecard, Idea lab dashboard page with calibration charts
 
 **Done when:** the lab runs a full weekly cycle by itself (propose → test → promote or retire) and the user sees it in reports.
@@ -274,3 +301,8 @@ daily, and limits/failures defer cleanly.
 | 2026-11-06 | Validation (`python -m core.backtest.validate`): SPY buy & hold +329.54% vs actual +329.64%; AAPL adj factor 0.2249; 200-day rule cuts max drawdown −33.8% → −19.5%; look-ahead detector works; Apple→supplier study reproduced exactly from the database. |
 | 2026-11-06 | Lessons/fixes: (1) API timestamps must be converted to UTC (DB session is Pacific). (2) Unknown task types now wait for a daemon restart instead of failing. (3) Rate limiter is now shared across processes via lock files (CLI + daemon together must stay under SEC's 10 req/s). (4) SEC lists insider quarters before publishing them → 404s skipped. (5) Long backfills starved short jobs at 4 threads → 8 worker threads. (6) Benchmarks must run with `enforce_limits=False` (the 15% cap otherwise applies). |
 | 2026-11-06 | Backfills queued (running in the daemon): prices 2016→today for ~6,100 symbols, news 2 years, SEC profiles/filings/financials for 5,326 companies, insider trades 2016→2026q1 bulk. **Remaining for Phase 1:** let backfills finish, then run survivorship report, measure DB size, test a backup restore, earnings-date table from 8-K item 2.02. |
+| 2026-11-06 | Backfills done: prices 11.46M bars / 5,986 symbols; news 535k items (from 2019-07); insider 2.31M transactions (41 quarters, through 2026q1). SEC backfill hit a company whose XBRL file has no `facts` section (KeyError, 5 retries) → fixed: missing facts = 0, and one company's bad data is now logged and skipped instead of stopping the run. DB 3.5 GB; 74 GB free. |
+| 2026-11-06 | **Design additions (user request):** no local language model, maximize the Claude Max plan (budget scheduler fills spare capacity); memory at market/theme/stock level with roll-ups, predictions log and a read-only AI search toolkit (arch §5.5); market snapshot + Opus daily market analysis for learning + weekly money-flow map (§5.6, §17); study of big moves (§9). AI story calls are tested only going forward (Claude knows past outcomes). Added to Phases 2 (2.1b), 3 (3.6b, 3.6c) and 4. |
+| 2026-11-06 | Data keys: **FRED** verified (10-year yield; vintage dates available → point-in-time macro). **Finnhub free** verified: upcoming earnings calendar with EPS/revenue estimates, last 4 quarters of surprises, recommendation counts, peers, insider sentiment; 403 on estimate history, price targets, upgrades, supply chain, transcripts, economic calendar. Bigdata.com key received in chat; waiting for it to be placed in `.env` to evaluate. |
+| 2026-11-06 | Bigdata.com tested: AMD search returned 9 highly relevant docs (Benzinga, CNBC, Globe and Mail, Motley Fool, Quartr transcript, podcasts) with per-passage sentiment; cost 22 of 1,000 starter credits per 10-passage search (premium news ≈ 75%). Decision: reserve for high-value cases only. Free substitutes verified: Finnhub company news (248 AMD articles Nov 3–6, ~1-year history), GDELT (free, 1 req / 5 s), Claude web search inside research runs. |
+| 2026-11-06 | **Phase 2 started: dashboard v1** at `localhost:8090` (FastAPI + one plain-JS page, light theme; launchd agent `com.ninad.tradebot.dashboard`). While building it, found that the **scheduler thread had died at 5:15 pm PT**: `scheduler.sync()` crashed on the one schedule with a payload dict (`**d` overwrote the JSON-encoded payload), and the exception escaped the loop while the heartbeat kept saying "healthy". Fixed: payload encoding; sync retried inside the loop; heartbeat now reports `scheduler_age_s` and live worker count; the daemon exits (launchd restarts it) if any thread dies; dashboard flags a scheduler with no pass in 5 min. Missed jobs ran on catch-up (gap check backfilled 74 stocks). Regression tests added; 32 tests pass. |

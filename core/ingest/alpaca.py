@@ -43,6 +43,11 @@ def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def trading(path: str, params: dict | None = None) -> dict | list:
+    """Read-only GET on the paper trading API (account, positions, orders, portfolio history)."""
+    return get(f"{_cfg['trading_url']}{path}", params)
+
+
 def assets(status: str) -> list[dict]:
     return get(f"{_cfg['trading_url']}/v2/assets", {"status": status, "asset_class": "us_equity"})
 

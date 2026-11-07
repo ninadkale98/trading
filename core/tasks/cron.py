@@ -47,3 +47,13 @@ def last_due(expr: str, now: datetime, lookback_minutes: int) -> datetime | None
             return t
         t -= timedelta(minutes=1)
     return None
+
+
+def next_due(expr: str, now: datetime, lookahead_minutes: int = 8 * 24 * 60) -> datetime | None:
+    """First minute > now when `expr` is due (within the lookahead)."""
+    t = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    for _ in range(lookahead_minutes):
+        if matches(expr, t):
+            return t
+        t += timedelta(minutes=1)
+    return None

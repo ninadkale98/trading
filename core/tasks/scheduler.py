@@ -24,8 +24,8 @@ def sync(definitions: list[dict]) -> None:
                ON CONFLICT (name) DO UPDATE SET task_type=EXCLUDED.task_type, payload=EXCLUDED.payload, cron=EXCLUDED.cron,
                  priority=EXCLUDED.priority, resource=EXCLUDED.resource, expires_minutes=EXCLUDED.expires_minutes,
                  enabled=EXCLUDED.enabled""",
-            {"payload": json.dumps(d.get("payload", {})), "priority": d.get("priority", 50), "resource": d.get("resource"),
-             "expires_minutes": d.get("expires_minutes", 60), "enabled": d.get("enabled", True), **d},
+            {**d, "payload": json.dumps(d.get("payload", {})), "priority": d.get("priority", 50),
+             "resource": d.get("resource"), "expires_minutes": d.get("expires_minutes", 60), "enabled": d.get("enabled", True)},
         )
     execute("UPDATE schedules SET enabled=false WHERE NOT (name = ANY(%s))", (names,))
 

@@ -1,6 +1,6 @@
 # Market Research & Paper-Trading System: Architecture
 
-> Status: **design agreed, not yet built** (Nov 2026).
+> Status: **design agreed; Phase 0–1 built** (Nov 2026). Memory, market analysis and study of big moves added Nov 6 2026.
 > Goal: a background system that keeps a living map of the US stock market, keeps inventing and
 > testing investing ideas, paper-trades the ones that prove themselves on Alpaca, and reports
 > where the odds look best for **multi-week to multi-month** holds (not day trading).
@@ -65,8 +65,13 @@ with a "known at" timestamp.
 | Insider trades (Form 4) | SEC EDGAR | When filed | Filed within about 2 business days |
 | Big funds' holdings (13F) | SEC EDGAR | Quarterly | Up to 45 days late |
 | Short interest | FINRA | Twice a month | |
-| Earnings calendar | EDGAR / Robinhood (through Claude) | Daily | |
-| Macro (rates, inflation, jobs) | FRED | On release | |
+| Earnings calendar + **analyst expectations** | **Finnhub** (free key, tested 2026-11-06) + EDGAR 8-K 2.02 for past dates | Daily | Free tier gives: upcoming earnings dates with EPS and revenue **estimates**, last 4 quarters of beat/miss, monthly analyst buy/hold/sell counts, peers, insider sentiment. Not free: estimate history, price targets, upgrades, supply chain, transcripts. **Saved daily, so we build our own estimate history going forward.** For past years, the earnings-day price reaction stands in for the surprise. |
+| More news sources (Yahoo, Seeking Alpha, CNBC, Benzinga) | **Finnhub company news** (free) | Every evening per active stock; on demand in research | Tested: 248 AMD articles over Nov 3–6 2026 with headline + summary; free history only about 1 year back, so it's saved daily from now on |
+| World events and themes (global news volume and tone by topic and country) | **GDELT** (free, no key) | Daily | Max 1 request per 5 seconds; used for theme and macro tracking (e.g. "AI chips", "tariffs", "oil supply") |
+| Open web research | **Claude's own web search** inside research runs | During research | Included in the Claude plan |
+| Premium AI search: news, transcripts, podcasts, web, with sentiment per passage | **Bigdata.com** (RavenPack) | **Only for high-value cases** (conviction-bet checks, unclear big moves) | Tested 2026-11-06: excellent relevance and sources, but one 10-passage search cost **22 of the 1,000 starter credits** (premium news is ~75% of the cost). Too expensive for daily use across 5,000 stocks; free sources above cover most of it. |
+| Macro (rates, inflation, jobs, yields, credit spreads) | **FRED** (St. Louis Fed, free; needs a free API key) | On release | Point-in-time: store the value as first published, plus later revisions |
+| **Cross-asset and global markets** | Alpaca daily bars of ETFs | Every evening | Bonds (TLT, IEF, SHY), credit (HYG, LQD), dollar (UUP), gold/silver (GLD, SLV), oil/gas (USO, UNG), commodities (DBC), bitcoin (IBIT), fear (VIXY); Europe, Japan, China, India, emerging markets (VGK, EWJ, FXI, INDA, EEM); styles (RSP equal-weight, IWM small caps, IWF/IWD growth/value, MTUM, QUAL); themes (SMH, IGV, XBI, ITA, KRE, XHB, TAN, URA, CIBR, …). Gives a whole-world view with the data we already have. |
 | Deep per-stock detail: analyst ratings, Level 2 order book, politician trades, filing facts | **Robinhood MCP**, **only through Claude** | During research | A Python job can't call it directly, so it's used in the research layer. Per-call limits: fundamentals 10 symbols, analyst ratings 75, quotes 20. **Robinhood MCP has no news.** |
 
 **Universe (decided):** **all ~5,000 US-listed common stocks** get data, daily features and tripwire checks
@@ -91,12 +96,14 @@ today's 5,000 survivors would make every strategy look better than it really was
 
 ---
 
-## 4. Database: PostgreSQL (+ pgvector)
+## 4. Database: PostgreSQL
 
 **Why PostgreSQL:** several processes read and write at once (scheduler, workers, Claude tasks,
 dashboard). DuckDB allows one writer at a time, and SQLite gets awkward with many writers. PostgreSQL handles
-it, holds the graph as plain tables, stores flexible facts as JSONB, and **pgvector** gives meaning-based
-search ("find past situations like this one"). DuckDB can still read Postgres for very large backtest
+it, holds the graph as plain tables, stores flexible facts as JSONB, has **built-in full-text search** (the AI searches
+news, journals, company maps and transcripts by keywords, dates and symbols), and **pgvector** finds similar *numeric*
+situations ("past setups whose numbers look like today's"). No local language model is used (decided): all language
+understanding comes from Claude on the user's plan. DuckDB can still read Postgres for very large backtest
 calculations. No separate graph database is needed at about 5,000 nodes; Python loads the graph into memory
 when needed.
 
@@ -110,7 +117,8 @@ MARKET DATA   stocks · daily_prices · minute_prices · news · filings · earn
               fund_holdings · short_interest · macro
 KNOWLEDGE     nodes (companies, sectors, themes) · edges (typed, weighted, dated) · claims (versioned)
               company_maps (versioned) · knowledge_changelog
-ANALYSIS      features (daily, per stock) · signals · event_fingerprints (pgvector)
+MEMORY        market_days · theme_days · stock_timeline · journal_rollups (week / month / quarter) · predictions
+ANALYSIS      features (daily, per stock) · market_snapshot (daily) · signals · big_moves · event_fingerprints (pgvector, numbers only)
 LAB           ideas · experiments · backtest_results · strategies (stage + version)
 TRADING       trade_plans · approvals (requests, decisions, deadlines, outcomes) · orders · positions · journal · calibration
 SYSTEM        tasks · runs · events (the "Today" timeline) · ai_usage · errors
@@ -206,6 +214,70 @@ edges are kept only above a strength threshold). That's small for any database.
 - **Path finder:** "how is Apple connected to Micron?"
 - Click any edge → its evidence (filing excerpt, news item, price-study numbers) and change history.
 - Export to GraphML for deeper exploration in Gephi (a free desktop graph tool) if wanted.
+
+### 5.5 Memory: a daily checkpoint at every level, searchable by the AI
+
+The AI forgets everything between runs, so the **database is its memory**. Every day leaves a dated checkpoint at
+three levels; nothing is overwritten, so "what did we know and think on date X?" always has an answer.
+
+| Level | Saved every day | Written by |
+|---|---|---|
+| **Market** (`market_days`) | The numbers (§5.6 market snapshot) + a written analysis: what happened, why, where money moved, what changed in our view, open questions, predictions | Python (numbers), **Opus** (analysis, 9 pm) |
+| **Theme** (`theme_days`) | Each theme's strength (AI chips, rates, oil, consumer, …): how its stocks did, news volume and tone, a short note when something changed | Python + Haiku/Sonnet |
+| **Stock** (`stock_timeline`) | Dated events: big moves with their classified cause, earnings and guidance, insider clusters, analyst changes, important news (summarized), research notes, tripwire hits. Plus daily features and the versioned company map | Python + Haiku/Sonnet |
+
+**Roll-ups, so the whole story fits in one reading.** Every Saturday Opus compresses the week into a weekly entry;
+at month end, the weeks into a **monthly chapter**; at quarter end, a **quarterly chapter** ("Q3 2026: AI capex
+boom broadens from GPUs to memory and power; rates fall; small caps lag"). Any day, Opus can read the last 5 days,
+4 weeks, 6 months and every quarterly chapter in one go: the market's story from 2016 to today in a few pages.
+Old periods get their chapters written once, from stored prices and news, in a one-time catch-up.
+
+**Predictions log.** Every forecast is written down in a form that can be checked: what, by when, how likely
+("SMH beats SPY over the next 4 weeks, 65%"). Python scores each one when its date arrives. Over time this shows
+whether the AI's market calls are any good (calibration), and it keeps the story honest: you can't quietly change
+your mind after the fact.
+
+**How the AI searches it.** Claude runs headless through Claude Code, which can run commands. Each run gets a
+**read-only toolkit** (a read-only database user, so it can't change anything):
+
+```
+tradebot memory market --date 2026-11-06        # that day's snapshot + analysis
+tradebot memory stock AMD --since 2025-01-01    # AMD's timeline, company map versions
+tradebot memory theme "AI chips"                # theme history and member stocks
+tradebot search "HBM shortage" --since 2026-06 --kind news,transcript,journal
+tradebot sql "SELECT ..."                       # any read-only query
+   (every command takes --as-of DATE, which hides anything learned after that date)
+```
+
+**Feeding Opus "the whole market".** Giving Opus raw rows for 5,000 stocks would be ~1M+ tokens, mostly noise.
+Instead, Python pre-digests everything into a **market pack** (~30–60k tokens): indexes, sectors, themes, breadth,
+cross-asset and global moves, the ~150 largest companies with key numbers, every big move with its cause, leaders
+and laggards, money-flow shifts, macro releases, yesterday's analysis and open predictions. Opus reads the pack,
+then **digs into anything with the toolkit**. Organized tables plus the ability to look things up beat a giant
+dump in both cost and quality.
+
+### 5.6 Understanding the market: where money is flowing
+
+Computed daily for all stocks and ETFs by Python (free), stored in `market_snapshot`, read by Opus:
+
+| Lens | Question it answers | Measures |
+|---|---|---|
+| **Breadth** | Is the whole market rising, or just a few giants? | % of stocks above their 50/200-day averages, new highs vs new lows, up vs down stocks, equal-weight (RSP) vs SPY |
+| **Sector and theme rotation** | Where is money moving in and out? | 1-week / 1-month / 3-month strength of each sector and theme vs SPY, and whether it's speeding up or slowing (rotation map: leading, weakening, lagging, improving); shifts in each group's share of total dollar volume |
+| **Style** | What kind of stocks does the market want? | Growth vs value, small vs large, momentum, quality, defensive (utilities, staples) vs cyclical (tech, discretionary) |
+| **Cross-asset** | Risk-on or risk-off? | Bond yields, dollar, oil, gold, credit spreads (HYG vs IEF), bitcoin, volatility |
+| **Global** | Is this a US story or a world story? | Europe, Japan, China, India, emerging markets |
+| **Leaders** | Who is the market rewarding? | New 52-week highs by theme, strongest stocks within the strongest groups |
+| **Macro** | What is the economy doing? | Rates, inflation, jobs, yield curve (FRED), with release-day surprises |
+
+From these, a **market regime** label (e.g. "risk-on, led by AI hardware, narrow breadth") feeds the exposure dial
+(§10.3), the briefing, and the market journal (§5.5).
+
+**Stories vs prices (why the system waits for confirmation).** A macro story can be right while the trade is wrong.
+In 2026 "AI needs chips" was true for both AMD (+101% Jan 2 → Nov 6) and NVDA (−1%), and SMH rose +24%. The story
+didn't say *which* stock or *when*, and obvious stories are often already in the price. So the AI's role is to
+**know the story** (themes in the graph), and the system **acts when the story shows up in the numbers**: revenue
+speeding up, guidance raised, estimates rising, the stock starting to beat its sector, volume building.
 
 ---
 
@@ -314,6 +386,21 @@ propose → backtest (2016–2022) → validate on unseen years (2023–2024) �
 
 **Idea sources:** the user · Opus reading the lab notebook · patterns found in the data · known research effects
 (post-earnings drift, momentum, insider buying, customer→supplier lag).
+
+**Study of big moves ("what came before the winners").** Every week Python finds every stock that rose ≥ 20% within
+~3 months or ≥ 50% within ~6 months since 2016 (and the mirror image: big losers). For each one it records what
+was **knowable before the move began**: features, revenue and margin trend, earnings surprises and guidance, insider
+buying, sector and theme strength, breadth, news volume and tone, graph neighbors. Then it compares them with
+**look-alikes that didn't move** (same date, same sector, similar setup). Without that comparison every pattern looks
+great. The output is base rates ("of stocks with X, Y, Z, 18% rose 20%+ in 3 months vs 6% normally") that become
+strategy ideas for the gates above. Sonnet writes short case studies of big recent winners for learning, labeled as
+hindsight. Going forward, stocks that match a winner profile each day go on a watch list, and their outcomes are
+recorded: an honest live test.
+
+**AI judgment can't be backtested honestly.** Claude already knows what happened up to its training date (AMD went up),
+so asking it "would you have picked AMD in 2025?" is look-ahead bias, even if nobody intends it. Rules: **number-based
+patterns** are tested on history; **AI story-based calls** (theme bets, company-map verdicts, Opus predictions) are
+tested **only going forward**, in the predictions log and paper trading.
 
 **Lab notebook:** every experiment logs hypothesis, code version, parameters, data period, results,
 verdict and lesson. Opus reads it before proposing the next round, so failures teach the system and are
@@ -456,9 +543,11 @@ The system handles routine, rule-following work alone and **escalates anything u
 | **Opus** | **6 am morning plan**; **9 pm daily summary and new ideas**; conviction-bet proposals; weekly lab review; monthly scorecard | Daily ×2, weekly, monthly |
 | **Sonnet (skeptic role)** | Pessimistic review of every conviction bet, using bear-side data (§10.5) | When a conviction bet is proposed |
 
-- Runs headless through Claude Code (`claude -p`, model chosen per task) on the user's **$100 Claude plan**.
-  Plan limits are per 5-hour window and per week, so a **daily AI budget** governs the queue; lower-priority work
-  waits. Overflow option: pay-per-use API (Haiku is cheap).
+- Runs headless through Claude Code (`claude -p`, model chosen per task) on the user's **$100 Claude Max plan**.
+  No local model (decided): the goal is to get the most out of the plan. Plan limits are per 5-hour window and per
+  week, so a **budget scheduler** spreads work across windows: scheduled jobs (Opus plan/summary, earnings-day research)
+  get reserved room, and **unused capacity in each window is filled** with lower-priority work (research rotation,
+  catch-up chapters, case studies) instead of going to waste. Overflow option: pay-per-use API (Haiku is cheap).
 - Every Claude output is checked against a schema before it's written to the database.
 - Optional fallback: if Opus is still blocked hours later, Sonnet writes the daily summary, labeled as such.
 
@@ -473,12 +562,12 @@ The system handles routine, rule-following work alone and **escalates anything u
 | 6:00–9:30 am | Overnight news loaded and triaged, pre-market gaps |
 | **9:15 am** | **Approval deadline** for today's trades; unanswered requests default to "no trade" |
 | 9:30 am – 4:00 pm | Every 15–30 min: news, watchlist prices, tripwires, order and stop management |
-| 4:30 pm | Daily bars for all stocks → features → strategies → planner → tomorrow's plan |
+| 4:30 pm | Daily bars for all stocks → features → **market snapshot** (breadth, rotation, cross-asset) → strategies → planner → tomorrow's plan |
 | 5:30–8:00 pm | **Sonnet research queue**, knowledge-map updates |
-| **9:00 pm** | **Opus daily summary and new ideas** → report and lab queue |
+| **9:00 pm** | **Opus daily summary, daily market analysis and new ideas** → market journal, reports, predictions log, lab queue |
 | **9:30 pm** | **Daily briefing published** (10–15 min read) with approval requests for tomorrow; review it in the evening or by 9:15 am |
 | Overnight | Backtests of new ideas, gap checker, database backup |
-| Saturday | Opus weekly review: promote, retire, new idea round; weekly picks report |
+| Saturday | Opus weekly review: promote, retire, new idea round; weekly picks report; **weekly money-flow map** and journal roll-up; **study of big moves** refreshed |
 | Month end | Monthly scorecard |
 
 ---
@@ -533,7 +622,7 @@ instead of piling up. Every run, error and AI call is logged (`runs`, `errors`, 
 ## 16. Dashboard
 
 Local web app on the always-on Mac (FastAPI + a simple live-updating page), reading the same PostgreSQL.
-Opened at `localhost:8080` through VS Code's SSH port forwarding; phone access later through a private network tool such as Tailscale.
+Opened at `localhost:8090` through VS Code's SSH port forwarding; phone access later through a private network tool such as Tailscale.
 
 **Theme:** light and clean: white and soft-gray backgrounds, dark readable text, green and red only for gains and losses,
 large text, single-column layout on phones.
@@ -543,13 +632,14 @@ large text, single-column layout on phones.
 | **Review** (home page) | **Today's briefing** (§17) and the **approval queue**: each request with the case for, the case against, size, worst-case loss, chart; approve / trim / reject buttons plus a comment box; history of past decisions and how they turned out |
 | **Live** | Running jobs, queue, next scheduled runs, AI budget used today; pause / resume / run now / retry |
 | **Today** | Timeline of everything done today ("4:31 pm prices for 1,512 stocks · 6:10 pm researched 32 companies · 9:05 pm Opus summary") |
-| **Market** | Sector heat map, exposure dial, tripwire hits, big moves with their classified cause |
+| **Market** | Today's market analysis; breadth; sector and theme rotation map; cross-asset and global; exposure dial and regime; tripwire hits; big moves with their classified cause; market journal timeline (day → week → month → quarter); predictions and their score |
 | **Portfolio** | Paper positions, P&L **vs SPY**, open orders, stops and trailing stops |
 | **Idea lab** | Strategies by stage with test results, calibration charts, lab notebook |
 | **Knowledge** | Graph explorer, company maps, **knowledge changelog** |
 | **Reports** | 6 am plan, 9 pm summary, weekly picks, monthly scorecard |
 | **Charts** | Interactive charts (same engine as Stock View) with entry, stop and target lines |
 | **Health** | Failed and deferred tasks with reasons and retry times, data gaps, last successful run per job |
+| **Data** | What the system holds: stocks covered, history depth per dataset, liquidity tiers, sectors |
 
 The VS Code **Stock View** extension (`stock-view/`) stays for chart work in the editor.
 
@@ -573,7 +663,19 @@ Light theme, readable on a phone, written in plain language, with every term lin
 The user can reply in chat with questions or decisions ("why #2?", "approve #3, half size", "research XYZ deeper"),
 and Claude records the decision in the approval queue.
 
+### Daily market analysis: for learning (optional, ~10–15 min)
+Written by Opus at 9 pm from the market pack, saved to `reports/market/YYYY-MM-DD.md` and the market journal,
+linked from the briefing. Plain language, with terms linked to `learning/`.
+
+1. **What happened:** indexes, breadth, the biggest moves, and **why** (with evidence: news, earnings, macro releases)
+2. **Where money moved:** sectors, themes and styles gaining or losing, cross-asset and global picture
+3. **The story so far:** how today fits the week's and month's story; what changed in our view
+4. **What to watch:** upcoming earnings, macro releases, tripwires close to firing
+5. **Predictions:** new ones with odds, and old ones scored
+6. **Lesson of the day:** one concept explained with today's example
+
 ### Other reports
+- **Weekly money-flow map (Saturday):** rotation map, theme leaderboard, the 4-week story, what changed, prediction scorecard.
 - **6 am plan:** market conditions, today's plans (confirmed / trimmed / cancelled and why), watch list, earnings today.
 - **9 pm summary:** what moved and why, knowledge changes, positions, lab results, new ideas queued.
 - **Weekly picks:** top ideas with setup, evidence, historical odds, expected move, risk, theme exposure; vs SPY.
@@ -597,7 +699,7 @@ trading/
   strategies/      promoted/ · paper/ · experimental/ · retired/                              ← AI writes here
   knowledge/       companies/<SYMBOL>.md (exported company maps)
   lab/             notebook.md · experiments/
-  reports/         daily/ · weekly/ · monthly/
+  reports/         daily/ · market/ · weekly/ · monthly/
   dashboard/       FastAPI app + light-theme web page
   docs/            architecture.md (this file)
   learning/        beginner guides to every term
@@ -616,8 +718,8 @@ The detailed, step-by-step checklist with progress tracking is in **[build-plan.
 | Phase | Build | Result |
 |---|---|---|
 | 1 | PostgreSQL, task queue and scheduler, data loaders (Alpaca prices and news, EDGAR), point-in-time storage, backtester | Can test any idea honestly; data stays up to date |
-| 2 | Daily features, first strategies, planner and risk rules, Alpaca paper execution, journal, **basic dashboard (Review with daily briefing and approval queue, Live, Today, Portfolio, Health)** | The system paper-trades on its own |
-| 3 | Knowledge layer: graph, claims, company maps, research queue (Haiku/Sonnet), Opus 6 am / 9 pm | It understands companies and connections |
+| 2 | Daily features, **market snapshot (breadth, rotation, cross-asset, macro)**, first strategies, planner and risk rules, Alpaca paper execution, journal, **basic dashboard (Review with daily briefing and approval queue, Live, Today, Portfolio, Health)** | The system paper-trades on its own |
+| 3 | Knowledge layer: graph, claims, company maps, research queue (Haiku/Sonnet), **memory (market/theme/stock journals, roll-ups, predictions) + AI search toolkit**, Opus 6 am / 9 pm with **daily market analysis**, study of big moves v1 | It understands companies, connections and the market's story |
 | 4 | Idea lab automation (Opus proposes, Sonnet writes strategies, stage gates), full dashboard | It improves itself |
 | 5 | Run 1–2+ months; weekly and monthly reviews | Evidence, or lessons |
 
@@ -634,4 +736,8 @@ The detailed, step-by-step checklist with progress tracking is in **[build-plan.
 | Market sleeve (unused money in SPY when the market is healthy) | **Decided: yes** |
 | Liquidity | **Decided:** tiers instead of a $10M cutoff: liquid ≥ $5M/day automatic, thin $1–5M automatic at reduced size, emerging < $1M only with manual approval (§3) |
 | Human in the loop | **Decided:** daily 10–15 min briefing; conviction bets go proposer → skeptic → **user approval**; escalation list and safe defaults in §10.8 |
+| Local language model (SLM) | **Decided: no.** All language work uses Claude on the $100 Max plan, using spare capacity in each window. Text search uses PostgreSQL full-text search; pgvector is kept for numeric similarity only |
+| Market understanding | **Decided:** daily market snapshot (breadth, rotation, style, cross-asset, global, macro), Opus daily market analysis for learning, weekly money-flow map (§5.6, §17) |
+| Memory | **Decided:** daily checkpoints at market, theme and stock level, weekly/monthly/quarterly roll-ups, predictions log, read-only search toolkit for the AI (§5.5) |
+| Study of big moves | **Decided:** what came before big winners and losers vs look-alikes that didn't move (§9) |
 | Daily AI budget numbers (research companies/day, Haiku batch frequency) | Open: tune in Phase 3 |

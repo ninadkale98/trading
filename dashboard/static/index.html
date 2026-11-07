@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tradebot</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231f6feb'/><path d='M6 22l6-7 5 4 9-11' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo"></span>Tradebot</div>
+    <div id="pulse" class="pulse" title="Background service status">…</div>
+  </header>
+  <nav class="tabs" id="tabs">
+    <a href="#review">Review</a>
+    <a href="#live">Live</a>
+    <a href="#today">Today</a>
+    <a href="#portfolio">Portfolio</a>
+    <a href="#data">Data</a>
+    <a href="#health">Health</a>
+  </nav>
+  <main id="page" aria-live="polite"><p class="muted">Loading…</p></main>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -17,6 +17,7 @@ earnings drop and our "Quality Uptrend Pullback" scan.
 | 7 | [07-orders-and-risk.md](07-orders-and-risk.md) | Market vs limit orders, stop-loss, gap risk, position sizing, diversification. **How not to lose big.** |
 | 8 | [08-our-scan-explained.md](08-our-scan-explained.md) | Every filter in our Robinhood scan, in plain words. |
 | 9 | [09-data-and-backtesting.md](09-data-and-backtesting.md) | Adjusted prices, SEC filings, insider trades, and how backtests avoid fooling themselves. |
+| 10 | [10-reading-the-whole-market.md](10-reading-the-whole-market.md) | Breadth, rotation, growth vs value, risk-on/off, stories vs prices, hindsight bias, base rates. **The big picture.** |
 | — | [glossary.md](glossary.md) | Every term, one line each, A–Z. Use it as a quick lookup. |
 
 ## The one-paragraph version

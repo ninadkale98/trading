@@ -2,8 +2,10 @@
 Run by launchd (starts at login, restarted if it exits). One failing task never stops the others."""
 from __future__ import annotations
 
+import json
 import signal
 import socket
+import sys
 import threading
 import time
 from datetime import timedelta
@@ -16,6 +18,7 @@ from core.tasks.registry import load_all
 
 STOP = threading.Event()
 HOST = socket.gethostname().split(".")[0]
+LAST_TICK = {"scheduler": 0.0}   # monotonic time of the last successful scheduler pass (shown in the heartbeat)
 
 
 def _worker(n: int) -> None:
@@ -35,12 +38,16 @@ def _worker(n: int) -> None:
 
 def _scheduler_loop() -> None:
     from core.schedules import SCHEDULES
-    scheduler.sync(SCHEDULES)
+    synced = False
     while not STOP.is_set():
         try:
+            if not synced:              # retried every pass until it works; a bad definition must not kill the loop
+                scheduler.sync(SCHEDULES)
+                synced = True
             scheduler.tick()
             queue.expire_stale()
             queue.recover_running(older_than=timedelta(hours=6))
+            LAST_TICK["scheduler"] = time.monotonic()
         except Exception as e:
             error(e, task_type="scheduler")
         STOP.wait(20)
@@ -50,10 +57,14 @@ def _heartbeat_loop() -> None:
     every = settings()["workers"]["heartbeat_seconds"]
     while not STOP.is_set():
         try:
+            last = LAST_TICK["scheduler"]
+            info = {"host": HOST, "threads": settings()["workers"]["threads"],
+                    "alive": sum(t.is_alive() for t in threading.enumerate() if t.name.startswith("worker-")),
+                    "scheduler_age_s": int(time.monotonic() - last) if last else None}
             execute(
                 "INSERT INTO heartbeats (component, ts, info) VALUES ('daemon', now(), %s) "
                 "ON CONFLICT (component) DO UPDATE SET ts = now(), info = EXCLUDED.info",
-                ('{"host": "%s", "threads": %d}' % (HOST, settings()["workers"]["threads"]),),
+                (json.dumps(info),),
             )
         except Exception as e:
             error(e, task_type="heartbeat")
@@ -80,9 +91,18 @@ def main() -> None:
                 threading.Thread(target=_heartbeat_loop, name="heartbeat", daemon=True)]
     for t in threads:
         t.start()
+    exit_code = 0
     while not STOP.is_set():
         time.sleep(1)
+        dead = [t.name for t in threads if not t.is_alive()]
+        if dead:
+            # Never limp along half-alive: stop, and let launchd (KeepAlive) start a fresh process.
+            event("daemon", f"thread(s) died: {', '.join(dead)}; restarting the service", level="error")
+            STOP.set()
+            exit_code = 1
     # Give running tasks a moment; anything still running is re-queued on next start.
     for t in threads:
         t.join(timeout=30)
     event("daemon", "stopped")
+    if exit_code:
+        sys.exit(exit_code)

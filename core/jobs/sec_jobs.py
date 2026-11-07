@@ -65,7 +65,7 @@ def sync_company(cik: int, full_history: bool) -> dict:
 
 def sync_financials(cik: int) -> int:
     try:
-        facts = sec.company_facts(cik)["facts"]
+        facts = sec.company_facts(cik).get("facts") or {}
     except Permanent as e:
         if "404" in str(e):
             return 0          # no XBRL financials (e.g. some foreign filers)
@@ -105,16 +105,23 @@ def backfill(ctx: TaskContext) -> dict:
     done = ctx.progress.get("done", 0)
     filings = ctx.progress.get("filings", 0)
     facts = ctx.progress.get("facts", 0)
+    skipped = ctx.progress.get("skipped", [])
     for i in range(done, len(ciks)):
-        r = sync_company(ciks[i], full_history=True)
-        filings += r["filings"]
-        facts += sync_financials(ciks[i])
+        try:
+            r = sync_company(ciks[i], full_history=True)
+            filings += r["filings"]
+            facts += sync_financials(ciks[i])
+        except (Permanent, KeyError, ValueError, TypeError) as e:
+            # bad data for ONE company must not stop the other thousands; note it and move on
+            skipped.append(ciks[i])
+            ctx.log(f"SEC backfill: skipped CIK {ciks[i]} ({type(e).__name__}: {e})")
         if (i + 1) % 25 == 0 or i + 1 == len(ciks):
-            ctx.checkpoint(done=i + 1, filings=filings, facts=facts)
+            ctx.checkpoint(done=i + 1, filings=filings, facts=facts, skipped=skipped)
         if (i + 1) % 500 == 0:
             ctx.log(f"SEC backfill {i + 1:,}/{len(ciks):,} companies: {filings:,} filings, {facts:,} financial facts")
-    return {"summary": f"SEC backfill: {len(ciks):,} companies, {filings:,} filings, {facts:,} financial facts",
-            "companies": len(ciks), "filings": filings, "facts": facts}
+    return {"summary": f"SEC backfill: {len(ciks):,} companies, {filings:,} filings, {facts:,} financial facts"
+                       f"{f', {len(skipped)} skipped' if skipped else ''}",
+            "companies": len(ciks), "filings": filings, "facts": facts, "skipped": skipped}
 
 
 @task("sec.company", resource="sec", priority=60, description="Refresh one company's filings (and financials after a 10-K/10-Q)")

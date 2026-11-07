@@ -10,6 +10,7 @@
   tradebot resume RESOURCE             un-pause it
   tradebot events [-n N]               recent timeline
   tradebot daemon                      run the background service (normally started by launchd)
+  tradebot dashboard                   run the dashboard web server on localhost:8090 (normally started by launchd)
 """
 from __future__ import annotations
 
@@ -40,7 +41,13 @@ def main(argv: list[str] | None = None) -> int:
     re_ = sub.add_parser("resume"); re_.add_argument("resource")
     ev = sub.add_parser("events"); ev.add_argument("-n", type=int, default=25)
     sub.add_parser("daemon")
+    sub.add_parser("dashboard")
     a = p.parse_args(argv)
+
+    if a.cmd == "dashboard":
+        from dashboard.app import serve
+        serve()
+        return 0
 
     from core.db import migrate, query
     from core.tasks import queue
