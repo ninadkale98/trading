@@ -322,6 +322,26 @@ def market(day: str | None = None):
     return cached(f"market:{day}", 60, load)
 
 
+@app.get("/api/lab")
+def lab(report: str | None = None):
+    runs = query("""SELECT DISTINCT ON (strategy, period) id, created_at, strategy, version, period, start_date, end_date,
+                           metrics, notes FROM backtest_runs
+                    WHERE strategy NOT LIKE 'ref.%%' AND strategy NOT LIKE '%%.random_twin'
+                    ORDER BY strategy, period, created_at DESC""")
+    total = query("SELECT count(*) n FROM backtest_runs")[0]["n"]
+    folder = ROOT / "lab" / "experiments"
+    reports = sorted((p.name for p in folder.glob("*.md")), reverse=True) if folder.exists() else []
+    body = None
+    if report and report in reports:
+        body = (folder / report).read_text()
+    elif reports:
+        body = (folder / reports[0]).read_text()
+    stages = {}
+    for st in ("experimental", "paper", "promoted", "retired"):
+        stages[st] = sorted(p.stem for p in (ROOT / "strategies" / st).glob("*.py") if not p.name.startswith("_"))
+    return {"runs": runs, "total_backtests": total, "reports": reports, "report": body, "stages": stages}
+
+
 @app.get("/api/portfolio")
 def portfolio():
     from core.ingest import alpaca

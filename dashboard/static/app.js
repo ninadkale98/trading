@@ -237,6 +237,30 @@ const views = {
       <div class="card"><h2>Open orders</h2>${table(["Stock", "Side", "Type", "#Qty", "#Price", "Placed"], ord, "No open orders.")}</div>`;
   },
 
+  async lab(param) {
+    const d = await api("/api/lab" + (param ? `?report=${encodeURIComponent(param)}` : ""));
+    const stageOf = {};
+    for (const [st, names] of Object.entries(d.stages)) for (const n of names) stageOf[n] = st;
+    const rows = d.runs.map((r) => {
+      const m = r.metrics, g = m.gates || {};
+      const gate = (k) => g[k] ? (g[k].ok ? "✅" : "❌") : "";
+      return `<tr><td><b>${esc(r.strategy)}</b> <span class="small muted">v${esc(r.version || "")}</span><div class="small muted">${esc(stageOf[r.strategy] || "")} · ${esc(r.period)}</div></td>
+        <td class="num">${num(m.trades)}</td><td class="num">${pct((m.win_rate ?? 0) * 100, 0)}</td>
+        <td class="num ${cls(m.avg_excess)}">${pct((m.avg_excess ?? 0) * 100)}<div class="small muted">t ${num(m.t_excess, 1)}</div></td>
+        <td class="num ${cls(m.excess_vs_twin)}">${pct((m.excess_vs_twin ?? 0) * 100)}<div class="small muted">t ${num(m.t_vs_twin, 1)}</div></td>
+        <td class="num hide-sm">${pct((m.sleeve_return ?? 0) * 100, 0)}<div class="small muted">SPY ${pct((m.benchmark_return ?? 0) * 100, 0)}</div></td>
+        <td class="small">${gate("enough_trades")}${gate("beats_spy_per_trade")}${gate("beats_random_twin")}${gate("works_most_years")}</td>
+        <td>${m.passed ? badge("passed", "good") : badge("not yet", "mute")}</td></tr>`;
+    });
+    const reps = d.reports.map((r) => `<a class="btn" href="#lab/${encodeURIComponent(r)}">${esc(r.replace(".md", ""))}</a>`).join(" ");
+    return `<h1>Idea lab</h1><p class="sub">Every strategy is tested on 2016–2022 against SPY and against a random twin
+      (same number of picks, random stocks, same exits). ${num(d.total_backtests)} backtests run so far: the more we try,
+      the higher the bar for "significant".</p>
+      <div class="card"><h2>Latest result per strategy</h2>${table(["Strategy", "#Trades", "#Win rate", "#Excess vs SPY per trade", "#vs random twin", "#With SPY sleeve", "Gates", ""], rows, "No backtests yet.")}
+        <p class="small muted">Gates: enough trades · beats SPY per trade (multiple-testing bar) · beats the random twin · works in most years.</p></div>
+      <div class="card md"><div class="row">${reps}</div>${d.report ? md(d.report) : ""}</div>`;
+  },
+
   async data() {
     const d = await api("/api/data");
     const u = d.universe, r = d.rows;
@@ -333,7 +357,7 @@ function lines(hist, spy) {
 }
 
 // ── Router + refresh loop ─────────────────────────────────────────────────────────────────────────────────
-const REFRESH = { review: 30, market: 120, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
+const REFRESH = { review: 30, market: 120, lab: 300, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
 let timer = null, busy = false;
 
 function route() {

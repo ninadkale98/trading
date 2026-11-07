@@ -2,6 +2,7 @@
 All facts are point-in-time: a financial number is usable only from the date it was filed."""
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 
 from core.db import conn, query
@@ -18,6 +19,8 @@ HISTORY_FROM = "2016-01-01"
 # XBRL concepts we keep (us-gaap and IFRS names for the same idea)
 CONCEPTS = {
     "us-gaap": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet", "CostOfRevenue",
+                "RevenueFromContractWithCustomerIncludingAssessedTax", "RevenuesNetOfInterestExpense", "SalesRevenueGoodsNet",
+                "CostOfGoodsAndServicesSold", "ProfitLoss", "NetIncomeLossAvailableToCommonStockholdersBasic",
                 "GrossProfit", "OperatingIncomeLoss", "NetIncomeLoss", "EarningsPerShareBasic", "EarningsPerShareDiluted",
                 "ResearchAndDevelopmentExpense", "CashAndCashEquivalentsAtCarryingValue", "Assets", "Liabilities",
                 "StockholdersEquity", "LongTermDebt", "LongTermDebtNoncurrent",
@@ -122,6 +125,67 @@ def backfill(ctx: TaskContext) -> dict:
     return {"summary": f"SEC backfill: {len(ciks):,} companies, {filings:,} filings, {facts:,} financial facts"
                        f"{f', {len(skipped)} skipped' if skipped else ''}",
             "companies": len(ciks), "filings": filings, "facts": facts, "skipped": skipped}
+
+
+@task("sec.financials_refresh", resource="sec", priority=35, description="Re-download financial numbers for every company (after adding concepts; resumable)")
+def financials_refresh(ctx: TaskContext) -> dict:
+    ciks = ctx.payload.get("ciks") or _universe_ciks()
+    done, facts, skipped = ctx.progress.get("done", 0), ctx.progress.get("facts", 0), ctx.progress.get("skipped", [])
+    for i in range(done, len(ciks)):
+        try:
+            facts += sync_financials(ciks[i])
+        except (Permanent, KeyError, ValueError, TypeError) as e:
+            skipped.append(ciks[i])
+            ctx.log(f"financials refresh: skipped CIK {ciks[i]} ({type(e).__name__}: {e})")
+        if (i + 1) % 25 == 0 or i + 1 == len(ciks):
+            ctx.checkpoint(done=i + 1, facts=facts, skipped=skipped)
+    return {"summary": f"financials refreshed: {len(ciks):,} companies, {facts:,} facts" + (f", {len(skipped)} skipped" if skipped else ""),
+            "facts": facts, "skipped": skipped}
+
+
+_SUFFIX = re.compile(r"\b(common stock|ordinary shares|american depositary shares?.*|depositary shares?.*|class [a-c]\b.*|"
+                     r"inc|incorporated|corp|corporation|co|company|ltd|limited|plc|llc|l\.?p|sa|nv|ag|se|the)\b")
+
+
+def _norm(name: str) -> str:
+    n = re.sub(r"[.,&'/()-]", " ", name.lower())
+    n = _SUFFIX.sub(" ", n)
+    return " ".join(n.split())
+
+
+@task("sec.delisted_ciks", resource="sec", priority=35, description="Find SEC ids for delisted companies by name (survivorship)")
+def delisted_ciks(ctx: TaskContext) -> dict:
+    """SEC's ticker file only lists current companies, so delisted stocks have no CIK and no fundamentals. Match their
+    names against EDGAR's full filer list; accept only a unique exact match of the normalized name."""
+    todo = query("""SELECT DISTINCT symbol, name FROM stocks WHERE status='inactive' AND asset_type='common' AND cik IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM stocks a WHERE a.symbol = stocks.symbol AND a.status = 'active')""")
+    wanted: dict[str, list[str]] = {}
+    for r in todo:
+        if r["name"]:
+            wanted.setdefault(_norm(r["name"]), []).append(r["symbol"])
+    hits: dict[str, set[int]] = {}
+    for line in sec.get_text("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt").splitlines():
+        parts = line.rsplit(":", 2)
+        if len(parts) < 3 or not parts[1].isdigit():
+            continue
+        key = _norm(parts[0])
+        if key in wanted:
+            hits.setdefault(key, set()).add(int(parts[1]))
+    matched, ambiguous = {}, 0
+    for key, ciks in hits.items():
+        if len(ciks) == 1:
+            for sym in wanted[key]:
+                matched[sym] = next(iter(ciks))
+        else:
+            ambiguous += 1
+    with conn() as c:
+        for sym, cik in matched.items():
+            c.execute("UPDATE stocks SET cik=%s WHERE symbol=%s AND status='inactive' AND cik IS NULL", (cik, sym))
+    if matched:
+        queue.enqueue("sec.backfill", {"ciks": sorted(set(matched.values()))}, priority=34, resource="sec",
+                      dedupe_key="sec.backfill:delisted")
+    return {"summary": f"delisted companies: {len(matched)} of {len(todo)} matched to SEC ids ({ambiguous} ambiguous names skipped)",
+            "matched": len(matched), "candidates": len(todo), "ambiguous": ambiguous}
 
 
 @task("sec.company", resource="sec", priority=60, description="Refresh one company's filings (and financials after a 10-K/10-Q)")
