@@ -1,0 +1,4 @@
+dev/**
+*.vsix
+.vscode/**
+node_modules/**

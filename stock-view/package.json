@@ -1,0 +1,61 @@
+{
+  "name": "stock-view",
+  "displayName": "Stock View",
+  "description": "Open stocks as files: interactive candlestick + volume charts you can select, annotate, and drive from Claude.",
+  "version": "0.1.0",
+  "publisher": "ninad",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/*.stock"
+  ],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "stockView.chart",
+        "displayName": "Stock Chart",
+        "selector": [
+          {
+            "filenamePattern": "*.stock"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languages": [
+      {
+        "id": "json",
+        "extensions": [
+          ".stock"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "stockView.openSymbol",
+        "title": "Stock View: Open Stock…",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "stockView.closeAll",
+        "title": "Stock View: Close All Charts"
+      },
+      {
+        "command": "stockView.copySelection",
+        "title": "Stock View: Copy Selection Summary"
+      },
+      {
+        "command": "stockView.refresh",
+        "title": "Stock View: Refresh Active Chart"
+      }
+    ]
+  }
+}

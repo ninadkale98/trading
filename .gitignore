@@ -1,0 +1,13 @@
+.env
+.stockview/
+stock-view/*.vsix
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+logs/
+backups/
+data/
+*.egg-info/
+.claude/settings.local.json

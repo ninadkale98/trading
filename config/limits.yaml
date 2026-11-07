@@ -1,0 +1,28 @@
+# TIER-1 HARD LIMITS  (docs/architecture.md §10.5)
+#
+# These are enforced in code. No AI, prompt, agent or approval button can change them.
+# Only the user changes this file, deliberately. Percentages are fractions (0.02 = 2%).
+
+max_loss_per_trade: 0.02          # stop-loss distance × shares ≤ 2% of account equity
+max_position_weight: 0.15         # ≤ 15% of the account in one stock
+max_theme_weight: 0.30            # ≤ 30% in one theme cluster (graph); sector proxy until Phase 3
+max_sector_weight: 0.25           # ≤ 25% in one sector
+max_unproven_strategy_weight: 0.40  # ≤ 40% in a strategy that isn't promoted yet
+require_stop_loss: true
+allow_margin: false
+allow_options: false
+allow_short: false
+circuit_breaker_drawdown: 0.10    # account down 10% from peak → no new trades until the user approves resuming
+
+# Normal (Tier-2) sizing defaults: inside the hard limits above
+normal_risk_per_trade_min: 0.005
+normal_risk_per_trade_max: 0.01
+conviction_risk_per_trade_max: 0.02   # conviction bets: proposer → skeptic → user approval
+
+# Liquidity tiers (avg daily dollar volume, USD)
+liquidity:
+  liquid_min_adv: 5000000         # ≥ $5M/day: automatic, normal size
+  thin_min_adv: 1000000           # $1–5M/day: automatic, reduced size
+  max_position_pct_of_adv: 0.01   # position ≤ 1% of average daily dollar volume
+  max_spread_pct: 0.005           # bid/ask spread ≤ 0.5%
+  min_price: 5.0                  # below this → treated as emerging (manual approval)

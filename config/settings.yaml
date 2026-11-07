@@ -1,0 +1,30 @@
+# General settings (safe for code and the user to tune). Hard limits live in limits.yaml.
+
+timezone: America/New_York
+
+database:
+  dsn: "dbname=market"           # local PostgreSQL via Unix socket
+
+data:
+  history_start: "2016-01-01"     # Alpaca SIP daily history starts in 2016
+  news_backfill_days: 730
+  reference_symbols: [SPY, QQQ, IWM, DIA, SMH, SOXX, XLK, XLE, XLF, XLV, XLI, XLY, XLP, XLU, XLB, XLRE, XLC]
+  universe_exchanges: [NASDAQ, NYSE, AMEX, ARCA, BATS]
+
+alpaca:
+  data_url: "https://data.alpaca.markets"
+  trading_url: "https://paper-api.alpaca.markets"
+  requests_per_minute: 180        # plan limit is 200; keep headroom
+  sip_delay_minutes: 16           # free plan: SIP requests must end ≥ 15 min in the past
+
+sec:
+  requests_per_second: 8          # SEC asks ≤ 10/s
+
+workers:
+  threads: 8
+  poll_seconds: 2
+  heartbeat_seconds: 60
+
+retry:
+  backoff_seconds: [60, 300, 900, 3600, 10800]   # 1m, 5m, 15m, 1h, 3h
+  max_attempts: 6

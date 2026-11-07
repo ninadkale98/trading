@@ -1,0 +1,30 @@
+{
+  "symbol": "INTC",
+  "range": "2y",
+  "interval": "1d",
+  "indicators": [],
+  "note": "Q3 2026 earnings (Oct 29, after close): beat on EPS ($0.52 vs $0.37) but guided Q4 revenue $15–16B vs ~$17.1B expected and gross margin ~38%. Worst day since 1974.",
+  "highlights": [
+    {
+      "from": "2026-10-29",
+      "to": "2026-11-05",
+      "label": "Post-earnings selloff",
+      "color": "#ef4444"
+    }
+  ],
+  "markers": [
+    {
+      "date": "2026-10-30",
+      "text": "Q4 guide-down −28.6%",
+      "position": "above",
+      "color": "#ef4444"
+    }
+  ],
+  "lines": [
+    {
+      "price": 65.76,
+      "label": "Oct 30 close",
+      "color": "#f59e0b"
+    }
+  ]
+}
