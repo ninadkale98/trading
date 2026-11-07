@@ -102,7 +102,7 @@ def main(argv=None) -> int:
     for c in ("t_vs_pool", "t_vs_spy", "t_vs_pool_adj"):
         fmt[c] = fmt[c].round(2)
     print(fmt.to_string(index=False))
-    path = ROOT / "lab" / "experiments" / f"{date.today()}-{a.period}-signal-study.md"
+    path = ROOT / "lab" / "experiments" / f"{date.today()}-{a.period}-signal-study{'-' + '-'.join(a.only) if a.only else ''}.md"
     path.write_text(f"# Signal study: {a.period} ({start} → {end})\n\nNo stops or exits: the entry signal alone. "
                     "`vs_pool` = flagged stocks minus the average eligible stock that day; `t_vs_pool_adj` is a rough "
                     "correction for overlapping holding windows.\n\n" + _md(fmt) + "\n")
