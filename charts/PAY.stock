@@ -1,0 +1,31 @@
+{
+  "symbol": "PAY",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "Paymentus · Earnings overreaction. Earnings overreaction pick: fell −11.5% on Nov 3 after its Q3 report, but was strong before (RS rank 68) and has held above that day's low for 3 days. Idea: the first drop was too big for a good company. Plan: buy ≤ $33.80; stop $29.20 (just under the reaction-day low), trailing 10%, hold up to 30 days. Risk: research says bad news often keeps drifting down.",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-11-03",
+      "text": "Earnings −11.5%",
+      "position": "below",
+      "color": "#ef4444"
+    }
+  ],
+  "lines": [
+    {
+      "price": 33.8,
+      "label": "Entry limit $33.80",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 29.2,
+      "label": "Stop $29.20",
+      "color": "#ef4444"
+    }
+  ]
+}

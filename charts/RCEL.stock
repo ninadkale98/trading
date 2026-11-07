@@ -1,0 +1,31 @@
+{
+  "symbol": "RCEL",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "Avita Medical · Momentum (relative strength). Momentum pick: RS rank 99 (top 1% of all stocks over the past year), perfect 5/5 uptrend, +26% in a month. Reported Nov 5 after the close (+5.8% next day). Plan: buy ≤ $16.76; stop $14.10 (−15%), trailing stop 15%, hold up to ~6 months. Risk: small medical-device company, big swings.",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-11-06",
+      "text": "Earnings +5.8%",
+      "position": "above",
+      "color": "#16a34a"
+    }
+  ],
+  "lines": [
+    {
+      "price": 16.76,
+      "label": "Entry limit $16.76",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 14.1,
+      "label": "Stop $14.10",
+      "color": "#ef4444"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "symbol": "HGTY",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "Hagerty · Accumulation. Accumulation pick: steady up-day volume, +26% in a month, RS rank 95; jumped +7.2% on its Nov 3 earnings. Classic-car insurer. Plan: buy ≤ $18.15; stop $16.35, trailing 12%, hold up to 60 days. Risk: stretched (RSI 74, 23% above its 50-day average).",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-11-03",
+      "text": "Earnings +7.2%",
+      "position": "above",
+      "color": "#16a34a"
+    }
+  ],
+  "lines": [
+    {
+      "price": 18.15,
+      "label": "Entry limit $18.15",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 16.35,
+      "label": "Stop $16.35",
+      "color": "#ef4444"
+    }
+  ]
+}

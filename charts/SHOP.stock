@@ -1,0 +1,31 @@
+{
+  "symbol": "SHOP",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "Shopify · Earnings overreaction. Earnings overreaction pick: fell −8.7% on its Nov 3 report (before the open) during the broad AI/tech selloff, held its low for 3 days. Plan: buy ≤ $150.40; stop $126.57, trailing 10%, hold up to 30 days. Risk: tech is out of favor (XLK −17% in a month).",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-11-03",
+      "text": "Earnings −8.7%",
+      "position": "below",
+      "color": "#ef4444"
+    }
+  ],
+  "lines": [
+    {
+      "price": 150.4,
+      "label": "Entry limit $150.40",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 126.57,
+      "label": "Stop $126.57",
+      "color": "#ef4444"
+    }
+  ]
+}

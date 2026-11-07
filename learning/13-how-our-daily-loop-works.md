@@ -29,6 +29,13 @@ All times are New York time (ET). Everything runs by itself on ichigo. The dashb
 3. Thinly traded stocks need **your approval**. Say "approve #3", "approve #3 half size" or "reject #3" in chat,
    or use the buttons on the Review page.
 
+## Earnings: handled automatically
+- **No new buys** within ~2 weeks of a company's earnings report (dates from two calendars, checked every planning run).
+- **Positions are sold before the report** (at the open of the session before it), because an earnings surprise can
+  gap a stock far past its stop-loss overnight (Intel: −28.6% in one night). A strategy built to hold through
+  earnings will need your approval for that.
+- Earnings headlines are read by Haiku as they come out, and Opus covers the important reports in the 9 pm analysis.
+
 ## Predictions
 Opus writes 2–5 predictions a day that a computer can check, for example "Healthcare (XLV) will beat SPY over the
 next 20 trading days, 57%". When the time is up they're scored automatically. Over weeks this shows whether the

@@ -1,0 +1,37 @@
+{
+  "symbol": "FROG",
+  "range": "6mo",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "JFrog · Earnings gap-up. Earnings gap-up pick: Q3 report Nov 5 after the close → stock jumped +35% on Nov 6 with heavy volume (beat + raised outlook; analysts raised targets to $110). Idea: after big good news, prices often keep drifting up for weeks. Plan: buy ≤ $101.99; stop $88.42, trailing 12%, hold up to 40 days.",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-11-06",
+      "text": "Earnings +35%",
+      "position": "above",
+      "color": "#16a34a"
+    },
+    {
+      "date": "2026-11-03",
+      "text": "−13.6% (chip/AI selloff)",
+      "position": "below",
+      "color": "#ef4444"
+    }
+  ],
+  "lines": [
+    {
+      "price": 101.99,
+      "label": "Entry limit $101.99",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 88.42,
+      "label": "Stop $88.42",
+      "color": "#ef4444"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "symbol": "JAKK",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "JAKKS Pacific · Accumulation. Accumulation pick: clearly more volume on up days than down days for 50 days, near its 52-week high, +19% in a month (RS rank 96). Toy maker heading into the holiday season. Plan: buy ≤ $33.98; stop $30.39, trailing 12%, hold up to 60 days. Risk: already stretched (RSI 72, 23% above its 50-day average).",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-10-23",
+      "text": "Earnings +3.3%",
+      "position": "above",
+      "color": "#16a34a"
+    }
+  ],
+  "lines": [
+    {
+      "price": 33.98,
+      "label": "Entry limit $33.98",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 30.39,
+      "label": "Stop $30.39",
+      "color": "#ef4444"
+    }
+  ]
+}

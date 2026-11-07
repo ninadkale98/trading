@@ -123,6 +123,11 @@ def plan_day(day: date | None = None) -> dict:
 
     plans, notes = [], []
     # ── exits and stop updates for open positions ──
+    # Earnings: sell before the report unless the strategy is built to hold through it. An exit planned tonight fills at
+    # the next open, so a report before the open of the session after that (or any time sooner) means exit now.
+    second = next_session(session)
+    reports = {r["symbol"]: r for r in query("SELECT symbol, report_date, time_of_day FROM upcoming_earnings "
+                                             "WHERE report_date BETWEEN %s AND %s", (day, second))}
     sessions_held = {}
     for b in book:
         j = m._cols.get(b["symbol"])
@@ -135,6 +140,9 @@ def plan_day(day: date | None = None) -> dict:
         if b["max_hold"] and held_days >= b["max_hold"]:
             reason = f"time stop: held {held_days} trading days (max {b['max_hold']})"
         st = by_name.get(b["strategy"])
+        rep = reports.get(b["symbol"])
+        if reason is None and rep and not (st is not None and st.holds_through_earnings):
+            reason = f"earnings on {rep['report_date']:%a %b %d} {rep['time_of_day'] or ''}: sell before the report".strip()
         if reason is None and st is not None and b["symbol"] in st.exits(t, m, {b["symbol"]}):
             reason = "strategy exit signal"
         if reason:

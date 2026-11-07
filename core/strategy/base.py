@@ -50,6 +50,7 @@ class FeatureStrategy(Strategy):
     min_price = 5.0
     min_adv = 1_000_000        # thin tier and above (architecture §3)
     needs_fundamentals = False
+    holds_through_earnings = False   # False → open positions are sold before the company reports (architecture §10.6)
     params: dict = {}
 
     # ── data ──────────────────────────────────────────────────────────────────────────────────────────────

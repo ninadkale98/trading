@@ -1,0 +1,31 @@
+{
+  "symbol": "OABI",
+  "range": "1y",
+  "interval": "1d",
+  "indicators": [
+    "sma50",
+    "sma200"
+  ],
+  "note": "OmniAb · Momentum (relative strength). Momentum pick: RS rank 99, perfect 5/5 uptrend. ~$5 stock (the minimum price we allow), biotech antibody platform. Reported Oct 30. Plan: buy ≤ $5.08; stop $4.28 (−15%), trailing 15%, hold up to ~6 months. Risk: cheap, volatile stock.",
+  "highlights": [],
+  "markers": [
+    {
+      "date": "2026-10-30",
+      "text": "Earnings −2.3%",
+      "position": "below",
+      "color": "#ef4444"
+    }
+  ],
+  "lines": [
+    {
+      "price": 5.08,
+      "label": "Entry limit $5.08",
+      "color": "#f59e0b"
+    },
+    {
+      "price": 4.28,
+      "label": "Stop $4.28",
+      "color": "#ef4444"
+    }
+  ]
+}
