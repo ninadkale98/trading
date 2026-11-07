@@ -18,6 +18,7 @@ earnings drop and our "Quality Uptrend Pullback" scan.
 | 8 | [08-our-scan-explained.md](08-our-scan-explained.md) | Every filter in our Robinhood scan, in plain words. |
 | 9 | [09-data-and-backtesting.md](09-data-and-backtesting.md) | Adjusted prices, SEC filings, insider trades, and how backtests avoid fooling themselves. |
 | 10 | [10-reading-the-whole-market.md](10-reading-the-whole-market.md) | Breadth, rotation, growth vs value, risk-on/off, stories vs prices, hindsight bias, base rates. **The big picture.** |
+| 11 | [11-our-daily-numbers.md](11-our-daily-numbers.md) | Every number the system computes daily: per-stock features, market snapshot, economy readings. |
 | — | [glossary.md](glossary.md) | Every term, one line each, A–Z. Use it as a quick lookup. |
 
 ## The one-paragraph version

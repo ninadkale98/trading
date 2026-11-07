@@ -93,6 +93,65 @@ const views = {
       <div class="card"><h2>Last 24 hours</h2>${table(["Job", "#Runs", "Latest result", "#Last"], last, "Nothing ran in the last 24 hours.")}</div>`;
   },
 
+  async market(param) {
+    const d = await api("/api/market" + (param ? `?day=${encodeURIComponent(param)}` : ""));
+    const m = d.snapshot;
+    if (!m) return `<h1>Market</h1><div class="placeholder">The first market snapshot appears after the evening price update (4:40 pm ET on trading days).</div>`;
+    const lvl = m.regime_detail.level, b = m.breadth || {}, sg = m.signals || {};
+    const lvlKind = { healthy: "good", mixed: "warn", defensive: "bad" }[lvl] || "mute";
+    const p = (v, dd = 1) => (v == null ? "—" : `<span class="${cls(v)}">${pct(v * 100, dd)}</span>`);
+    const quad = (q) => q ? badge(q, { leading: "good", improving: "info", weakening: "warn", lagging: "bad" }[q]) : "";
+    const gRows = (rows, sortKey = "rel_20d") => [...rows].sort((a, b) => (b[sortKey] ?? -9) - (a[sortKey] ?? -9)).map((r) =>
+      `<tr><td><b>${esc(r.symbol)}</b> <span class="small muted">${esc(r.name)}</span></td><td class="num">${p(r.ret_1d)}</td><td class="num">${p(r.ret_5d)}</td>
+       <td class="num">${p(r.ret_20d)}</td><td class="num hide-sm">${p(r.ret_60d)}</td><td class="num">${p(r.rel_20d)}</td><td>${quad(r.quadrant)}</td></tr>`);
+    const gHead = ["ETF", "#Day", "#Week", "#Month", "#3 months", "#vs SPY (month)", "Rotation"];
+    const sigInfo = [
+      ["credit_hy_vs_treasuries_20d", "Junk bonds vs Treasuries", "Up = investors comfortable lending to risky companies"],
+      ["small_vs_large_20d", "Small vs large companies", "Up = appetite for riskier, smaller stocks"],
+      ["cyclical_vs_defensive_20d", "Cyclical vs defensive sectors", "Up = betting on a strong economy"],
+      ["equal_vs_capweight_60d", "Average stock vs S&P 500 (3 months)", "Down = the rally is carried by a few giants"],
+      ["growth_vs_value_20d", "Growth vs value", "Up = market prefers fast growers"],
+      ["long_bonds_20d", "Long-term Treasuries", "Up = yields falling (often fear or slowing growth)"],
+      ["dollar_20d", "US dollar", "Up = money seeking safety or higher US rates"],
+      ["gold_20d", "Gold", "Up = hedging against fear or inflation"],
+      ["oil_20d", "Oil", ""], ["bitcoin_20d", "Bitcoin", "A speculative-appetite gauge"],
+      ["fear_vixy_5d", "Fear gauge (week)", "Up = investors paying for crash protection"],
+    ].map(([k, label, note]) => `<tr><td><b>${esc(label)}</b><div class="small muted">${esc(note)}</div></td><td class="num">${p(sg[k])}</td></tr>`);
+    const sec = (m.sectors || []).map((r) => `<tr><td>${esc(r.sector)}</td><td class="num">${num(r.stocks)}</td><td class="num">${p(r.median_ret_20d)}</td>
+      <td class="num hide-sm">${p(r.median_ret_60d)}</td><td class="num">${r.pct_above_50d == null ? "—" : num(r.pct_above_50d * 100, 0) + "%"}</td><td class="num">${num(r.avg_rs_rank, 0)}</td></tr>`);
+    const stockRows = (rows) => rows.map((r) => `<tr><td><b>${esc(r.symbol)}</b><div class="small muted">${esc(r.sector || "")}</div></td>
+      <td class="num">${money(r.close)}</td><td class="num">${p(r.ret_1d)}</td><td class="num">${p(r.ret_20d)}</td><td class="num hide-sm">${p(r.ret_60d)}</td>
+      <td class="num">${num(r.rs_rank)}</td><td class="num hide-sm">${r.rvol == null ? "—" : num(r.rvol, 1) + "×"}</td></tr>`);
+    const sHead = ["Stock", "#Price", "#Day", "#Month", "#3 months", "#RS rank", "#Rel. volume"];
+    const fmtMacro = (r, v) => v == null ? "—" : r.unit === "%" ? num(v, 2) + "%" : r.unit === "k" ? num(v, 0) + "k" : num(v, Math.abs(v) < 20 ? 2 : 0);
+    const macro = d.macro.map((r) => `<tr><td><b>${esc(r.label)}</b><div class="small muted">${esc(r.series)} · ${esc(r.date)}</div></td>
+      <td class="num">${fmtMacro(r, r.value)}</td><td class="num muted">${fmtMacro(r, r.prev)}</td><td class="num hide-sm muted">${r.year_ago == null ? "" : fmtMacro(r, r.year_ago)}</td></tr>`);
+    return `
+      <div class="row"><h1>Market</h1><span class="spacer"></span><span class="muted small">${esc(m.date)}</span></div>
+      <div class="card"><div class="row">${badge(lvl, lvlKind)} <b>${esc(m.regime)}</b></div>
+        <p class="small muted" style="margin:8px 0 0">Exposure dial: the system would keep about <b>${num(m.exposure * 100, 0)}%</b> invested in these conditions
+        (healthy 90–100%, mixed ~50%, defensive 20–30%). Risk-appetite votes: ${esc(m.regime_detail.appetite_votes)}.</p></div>
+      <div class="kpis">
+        <div class="kpi"><div class="label">Above 200-day average</div><div class="value">${b.pct_above_200d == null ? "—" : num(b.pct_above_200d * 100, 0) + "%"}</div><div class="note">of ${num(b.stocks)} stocks (long-term health)</div></div>
+        <div class="kpi"><div class="label">Above 50-day average</div><div class="value">${b.pct_above_50d == null ? "—" : num(b.pct_above_50d * 100, 0) + "%"}</div><div class="note">shorter-term health</div></div>
+        <div class="kpi"><div class="label">Up / down today</div><div class="value">${num(b.advancers)} / ${num(b.decliners)}</div><div class="note">median stock ${p(b.median_ret_1d)}</div></div>
+        <div class="kpi"><div class="label">Near 52-week high / low</div><div class="value">${num(b.near_52w_high)} / ${num(b.near_52w_low)}</div><div class="note">within 1%</div></div>
+      </div>
+      <div class="card"><h2>Breadth and S&amp;P 500 (last year)</h2>${lines(d.history, d.spy)}</div>
+      <div class="card"><h2>Risk signals (last month)</h2><p class="small muted">Spreads between assets show whether investors are taking risk or hiding.</p>${table(["Signal", "#Change"], sigInfo)}</div>
+      <div class="card"><h2>Sectors</h2>${table(gHead, gRows(m.groups.sector || []))}
+        <details><summary>Inside each sector (median stock)</summary>${table(["Sector", "#Stocks", "#Month", "#3 months", "#Above 50-day", "#Avg RS"], sec)}</details></div>
+      <div class="card"><h2>Themes</h2>${table(gHead, gRows(m.groups.theme || []))}</div>
+      <div class="grid">
+        <div class="card"><h2>Style</h2>${table(gHead.slice(0, 4), (m.groups.style || []).concat(m.groups.index || []).map((r) => `<tr><td><b>${esc(r.symbol)}</b> <span class="small muted">${esc(r.name)}</span></td><td class="num">${p(r.ret_1d)}</td><td class="num">${p(r.ret_5d)}</td><td class="num">${p(r.ret_20d)}</td></tr>`))}</div>
+        <div class="card"><h2>Bonds, commodities, currency, world</h2>${table(gHead.slice(0, 4), [...(m.groups.rates_credit || []), ...(m.groups.commodity_fx || []), ...(m.groups.global || [])].map((r) => `<tr><td><b>${esc(r.symbol)}</b> <span class="small muted">${esc(r.name)}</span></td><td class="num">${p(r.ret_1d)}</td><td class="num">${p(r.ret_5d)}</td><td class="num">${p(r.ret_20d)}</td></tr>`))}</div>
+      </div>
+      <div class="card" style="margin-top:16px"><h2>Economy</h2><p class="small muted">From FRED. "Before" = a month earlier for daily data, the previous release otherwise.</p>${table(["Measure", "#Latest", "#Before", "#Year ago"], macro)}</div>
+      <div class="card"><h2>Leaders</h2><p class="small muted">Strongest liquid stocks in uptrends, within 5% of their 52-week high.</p>${table(sHead, stockRows(m.leaders || []), "No stocks meet the leader rules today.")}</div>
+      <div class="grid"><div class="card"><h2>Biggest gainers today</h2>${table(sHead, stockRows(m.top_gainers || []))}</div>
+        <div class="card"><h2>Biggest losers today</h2>${table(sHead, stockRows(m.top_losers || []))}</div></div>`;
+  },
+
   async live() {
     const d = await api("/api/live");
     const hb = d.heartbeat;
@@ -196,6 +255,7 @@ const views = {
         <div class="kpi"><div class="label">News articles</div><div class="value">${num(r.news / 1e3, 0)}k</div><div class="note">since ${since(d.since.n0)}</div></div>
         <div class="kpi"><div class="label">SEC filings</div><div class="value">${num(r.filings / 1e6, 2)}M</div><div class="note">${num(r.financials / 1e6, 1)}M financial numbers</div></div>
         <div class="kpi"><div class="label">Insider trades</div><div class="value">${num(r.insider_trades / 1e6, 2)}M</div><div class="note">since ${since(d.since.i0)}</div></div>
+        <div class="kpi"><div class="label">Daily features</div><div class="value">${num(r.features_daily / 1e6, 2)}M</div><div class="note">30+ numbers per stock per day</div></div>
         <div class="kpi"><div class="label">Sector known</div><div class="value">${num(u.with_sector)}</div><div class="note">of ${num(u.stocks + u.etfs)} (fills in as SEC data loads)</div></div>
       </div>
       <div class="grid">
@@ -253,8 +313,27 @@ function chart(curve, spy) {
       <span class="muted">${esc(pts[0].date)} → ${esc(pts[pts.length - 1].date)}</span></div>`;
 }
 
+// Breadth (% above 200-day, % above 50-day) with SPY on its own scale, as one small SVG.
+function lines(hist, spy) {
+  if (!hist || hist.length < 2) return `<p class="muted">Not enough history yet.</p>`;
+  const W = 600, H = 200, n = hist.length, x = (i) => (i / (n - 1)) * (W - 40) + 30;
+  const y = (v) => H - 20 - v * (H - 30);
+  const pth = (key) => hist.map((h, i) => (h[key] == null ? "" : `${i && hist[i - 1][key] != null ? "L" : "M"}${x(i).toFixed(1)},${y(h[key]).toFixed(1)}`)).join("");
+  const spyBy = Object.fromEntries(spy.map((s) => [s.date, +s.c]));
+  const sv = hist.map((h) => spyBy[h.date] ?? null), lo = Math.min(...sv.filter((v) => v)), hi = Math.max(...sv.filter((v) => v));
+  const ys = (v) => H - 20 - ((v - lo) / (hi - lo || 1)) * (H - 30);
+  const sp = sv.map((v, i) => (v == null ? "" : `${i && sv[i - 1] != null ? "L" : "M"}${x(i).toFixed(1)},${ys(v).toFixed(1)}`)).join("");
+  const grid = [0.25, 0.5, 0.75].map((g) => `<line x1="30" x2="${W - 10}" y1="${y(g)}" y2="${y(g)}" stroke="#e4e7ec" stroke-dasharray="3 4"/><text x="0" y="${y(g) + 4}" font-size="11" fill="#7a8494">${g * 100}%</text>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Market breadth">${grid}
+      <path d="${sp}" fill="none" stroke="#c3cad5" stroke-width="2"/>
+      <path d="${pth("a50")}" fill="none" stroke="#9a6700" stroke-width="1.5"/>
+      <path d="${pth("a200")}" fill="none" stroke="#1f6feb" stroke-width="2.5"/></svg>
+    <div class="row small"><span><b style="color:#1f6feb">━ % above 200-day</b></span><span><b style="color:#9a6700">━ % above 50-day</b></span>
+      <span><b style="color:#c3cad5">━ S&amp;P 500</b> (own scale)</span><span class="muted">${esc(hist[0].date)} → ${esc(hist[n - 1].date)}</span></div>`;
+}
+
 // ── Router + refresh loop ─────────────────────────────────────────────────────────────────────────────────
-const REFRESH = { review: 30, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
+const REFRESH = { review: 30, market: 120, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
 let timer = null, busy = false;
 
 function route() {

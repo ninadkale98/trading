@@ -8,7 +8,8 @@ database:
 data:
   history_start: "2016-01-01"     # Alpaca SIP daily history starts in 2016
   news_backfill_days: 730
-  reference_symbols: [SPY, QQQ, IWM, DIA, SMH, SOXX, XLK, XLE, XLF, XLV, XLI, XLY, XLP, XLU, XLB, XLRE, XLC]
+  # index, sector, theme, style, bond/credit, commodity/currency and global ETFs (grouped in core/market/groups.py)
+  reference_symbols: [SPY, QQQ, IWM, DIA, RSP, MDY, XLK, XLV, XLF, XLE, XLI, XLY, XLP, XLU, XLB, XLRE, XLC, SMH, SOXX, IGV, CIBR, SKYY, BOTZ, XBI, IBB, ITA, KRE, XHB, XRT, JETS, XOP, TAN, URA, LIT, COPX, PAVE, ARKK, IWF, IWD, MTUM, QUAL, USMV, SHY, IEF, TLT, TIP, LQD, HYG, GLD, SLV, USO, UNG, DBC, CPER, UUP, IBIT, VIXY, VGK, EWJ, FXI, INDA, EWZ, EWY, EWT, EEM]
   universe_exchanges: [NASDAQ, NYSE, AMEX, ARCA, BATS]
 
 alpaca:
@@ -20,6 +21,9 @@ alpaca:
 sec:
   requests_per_second: 8          # SEC asks ≤ 10/s
 
+alphavantage:
+  requests_per_day: 25            # free plan cap; every call is counted in api_usage
+
 workers:
   threads: 8
   poll_seconds: 2
@@ -28,6 +32,9 @@ workers:
 retry:
   backoff_seconds: [60, 300, 900, 3600, 10800]   # 1m, 5m, 15m, 1h, 3h
   max_attempts: 6
+
+features:
+  store_from: "2024-01-01"        # features are stored from here on; older dates are recomputed on demand (backtests)
 
 dashboard:
   host: "127.0.0.1"               # local only; open through VS Code port forwarding

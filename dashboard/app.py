@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -94,6 +96,7 @@ def freshness() -> list[dict]:
     r = query("""SELECT
         (SELECT max(date) FROM daily_prices WHERE symbol='SPY')                      AS prices,
         (SELECT max(date) FROM liquidity)                                              AS liquidity,
+        (SELECT max(date) FROM features_daily WHERE symbol='SPY')                      AS features,
         (SELECT max(created_at) FROM news)                                             AS news,
         (SELECT max(filed_at) FROM filings)                                            AS filings,
         (SELECT max(filed_at) FROM insider_trades)                                     AS insider,
@@ -109,6 +112,8 @@ def freshness() -> list[dict]:
             "loads 4:40 pm ET on trading days"),
         row("Liquidity tiers", r["liquidity"], r["liquidity"] is not None and r["liquidity"] >= exp, f"{exp}",
             "after the price load"),
+        row("Daily features", r["features"], r["features"] is not None and r["features"] >= exp, f"{exp}",
+            "after the price load: trend, momentum, volume, relative strength, earnings timing"),
         row("News", r["news"], r["news"] is not None and (now - r["news"]).total_seconds() < 3 * 3600,
             "within 3 hours", "polled every 15 min"),
         row("SEC filings", r["filings"], r["filings"] is not None and r["filings"] >= prev_day, f"{prev_day}",
@@ -236,7 +241,7 @@ def data():
     def load():
         est = {r["relname"]: int(r["n"]) for r in query(
             "SELECT relname, reltuples::bigint n FROM pg_class WHERE relname IN "
-            "('daily_prices','news','filings','financials','insider_trades','liquidity','stocks')")}
+            "('daily_prices','news','filings','financials','insider_trades','liquidity','stocks','features_daily')")}
         u = query("""SELECT count(*) FILTER (WHERE is_universe AND asset_type='common') stocks,
                             count(*) FILTER (WHERE is_universe AND asset_type='etf') etfs,
                             count(*) FILTER (WHERE is_universe AND sector IS NOT NULL) with_sector,
@@ -250,6 +255,71 @@ def data():
         return {"rows": est, "universe": u, "tiers": tiers, "sectors": sectors, "since": span,
                 "db_gb": round(query("SELECT pg_database_size(current_database()) b")[0]["b"] / 1e9, 2)}
     return cached("data", 120, load)
+
+
+MACRO_SHOW = [  # (series, label, how to show the change)
+    ("DFF", "Fed funds rate", "level"), ("DGS2", "2-year Treasury yield", "level"), ("DGS10", "10-year Treasury yield", "level"),
+    ("T10Y2Y", "Yield curve (10y − 2y)", "level"), ("DFII10", "Real 10-year yield (after inflation)", "level"),
+    ("BAMLH0A0HYM2", "Junk-bond spread (risk premium)", "level"), ("T10YIE", "Expected inflation (10-year)", "level"),
+    ("CPIAUCSL", "Inflation (CPI, yearly)", "yoy"), ("CPILFESL", "Core inflation (CPI ex food & energy, yearly)", "yoy"),
+    ("PCEPILFE", "Core PCE inflation (the Fed's gauge, yearly)", "yoy"), ("UNRATE", "Unemployment rate", "level"),
+    ("PAYEMS", "Jobs added last month (thousands)", "diff"), ("ICSA", "Weekly jobless claims", "level"),
+    ("RSAFS", "Retail sales (yearly)", "yoy"), ("INDPRO", "Industrial production (yearly)", "yoy"),
+    ("UMCSENT", "Consumer sentiment", "level"), ("HOUST", "Housing starts (thousands, yearly rate)", "level"),
+    ("DCOILWTICO", "Oil price (WTI, $)", "level"), ("DTWEXBGS", "US dollar index", "level"),
+    ("NFCI", "Financial conditions (below 0 = easy money)", "level"),
+]
+
+
+def macro_table() -> list[dict]:
+    out = []
+    for sid, label, how in MACRO_SHOW:
+        obs = query("""SELECT date, value_latest v, first_known FROM macro_obs WHERE series_id=%s AND value_latest IS NOT NULL
+                       ORDER BY date DESC LIMIT 400""", (sid,))
+        if not obs:
+            continue
+        info = query("SELECT frequency, units FROM macro_series WHERE series_id=%s", (sid,))[0]
+        df = pd.DataFrame(obs).sort_values("date")
+        df["date"] = pd.to_datetime(df["date"])
+        s = df.set_index("date")["v"].astype(float)
+        last_date = s.index[-1]
+
+        def at(days):
+            prev = s[s.index <= last_date - pd.Timedelta(days=days)]
+            return float(prev.iloc[-1]) if len(prev) else None
+
+        if how == "yoy":
+            val = (s.iloc[-1] / at(365) - 1) * 100 if at(365) else None
+            prev_m = s[s.index < last_date]
+            p = prev_m.index[-1] if len(prev_m) else None
+            base = s[s.index <= p - pd.Timedelta(days=365)] if p is not None else []
+            before = (prev_m.iloc[-1] / base.iloc[-1] - 1) * 100 if p is not None and len(base) else None
+            unit = "%"
+        elif how == "diff":
+            val = s.iloc[-1] - s.iloc[-2] if len(s) > 1 else None
+            before = s.iloc[-2] - s.iloc[-3] if len(s) > 2 else None
+            unit = "k"
+        else:
+            val, before, unit = float(s.iloc[-1]), at(30), info["units"] or ""
+        out.append({"series": sid, "label": label, "date": last_date.date(), "value": val, "prev": before,
+                    "year_ago": at(365) if how == "level" else None, "unit": unit, "freq": info["frequency"],
+                    "published": obs[0]["first_known"]})
+    return out
+
+
+@app.get("/api/market")
+def market(day: str | None = None):
+    def load():
+        row = query("SELECT date, data FROM market_snapshot " + ("WHERE date <= %s " if day else "") +
+                    "ORDER BY date DESC LIMIT 1", (day,) if day else None)
+        hist = query("""SELECT date, exposure, (data->'breadth'->>'pct_above_200d')::float a200,
+                               (data->'breadth'->>'pct_above_50d')::float a50, data->'regime_detail'->>'level' lvl
+                        FROM market_snapshot ORDER BY date DESC LIMIT 260""")
+        spy = query("SELECT date, close * adj_factor c FROM daily_prices WHERE symbol='SPY' AND date >= %s ORDER BY date",
+                    (hist[-1]["date"],)) if hist else []
+        return {"snapshot": row[0]["data"] if row else None, "history": list(reversed(hist)), "spy": spy,
+                "macro": macro_table()}
+    return cached(f"market:{day}", 60, load)
 
 
 @app.get("/api/portfolio")

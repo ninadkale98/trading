@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 0 | Prerequisites (disk space, PostgreSQL, settings) | ✅ Done | 2026-11-06 | 2026-11-06 |
 | 1 | Foundation: database, task system, data loaders, backtester | 🟡 Code done; historical backfills running | 2026-11-06 | |
-| 2 | Paper-trading MVP: features, strategies, planner, Alpaca execution, approvals, briefing, basic dashboard | 🟡 Dashboard v1 running | 2026-11-06 | |
+| 2 | Paper-trading MVP: features, strategies, planner, Alpaca execution, approvals, briefing, basic dashboard | 🟡 Dashboard, features, market snapshot, earnings + macro data done; strategies next | 2026-11-06 | |
 | 3 | Knowledge layer and AI agents: graph, claims, company maps, research queue, memory + AI search, Opus plan, summary and daily market analysis, study of big moves | ⬜ Not started | | |
 | 4 | Idea lab: self-improving loop, conviction-bet debate, stage gates | ⬜ Not started | | |
 | 5 | Operate 1–2+ months, review, tune | ⬜ Not started | | |
@@ -41,7 +41,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⏸ blocked
       On startup the system catches up: missed jobs run or expire, and the gap checker backfills missing data.
 - [x] Install **PostgreSQL 17 + pgvector** via Homebrew; start it as a service (starts on boot); create database `market`
 - [x] SEC EDGAR identity saved in `.env` as `SEC_USER_AGENT` (name + email; no account needed)
-- [x] Git repo on `main`, pushed to the **private** GitHub repo `ninadkale98/trading` (first commit 2026-11-06). `.gitignore` covers `.env`, `.venv/`, `.stockview/`, logs, backups, `.claude/settings.local.json`. Commit/push only when the user asks.
+- [x] Git repo on `main`, pushed to the **private** GitHub repo `ninadkale98/trading` (first commit 2026-11-06). `.gitignore` covers `.env`, `.venv/`, `.stockview/`, logs, backups, `.claude/settings.local.json`. Commit and push at each finished step (user OK, 2026-11-07); never commit secrets.
 
 **Done when:** `psql market` connects, ≥ 60 GB free, auto-restart on, git repo exists.
 
@@ -128,16 +128,27 @@ failures, and a backtester that can test any idea without cheating.
 and gives the user a daily briefing and a basic dashboard.
 
 ### 2.1 Features (daily, all stocks)
-- [ ] Trend, momentum, RSI, ATR, relative volume, OBV/accumulation, 52-week distance, gaps
-- [ ] Earnings surprise/guidance (where available), revenue and margin growth, valuation, insider net buying
-- [ ] Sector and market relative strength; days to next earnings
-- [ ] Finnhub company news (daily, active stocks) and GDELT theme volume/tone (daily)
-- [ ] Finnhub loader: daily snapshot of the earnings calendar with estimates (builds our own estimate history), last-4-quarter surprises, monthly analyst rating counts, peers
+- [x] `core/features/` (one implementation for the nightly job **and** the backtester): returns 1d–1y, distance from
+      20/50/200-day averages and their slopes, RSI, ATR %, volatility, relative volume, ADV, accumulation (20/50 d),
+      52-week high/low distance, gap, relative strength vs SPY and sector ETF, **RS rank 1–99**, beta, trend score 0–5;
+      earnings timing (days since, reaction vs SPY, days to next report: exact calendar date when known that day, else +91 d).
+      Table `features_daily` (migration 004), stored from 2024-01-01 (~3.5M rows); older dates recomputed on demand.
+      Chain: `prices.daily` → `features.daily` → `market.snapshot`. Tests: values, **no look-ahead** (scrambled future
+      leaves the past unchanged), point-in-time earnings calendar
+- [ ] Fundamentals: earnings surprise (Alpha Vantage history), revenue and margin growth, valuation (P/E, P/S), insider net buying
+- [ ] Finnhub company news (daily, active stocks) and GDELT theme volume/tone (daily) → moved to Phase 3 (research inputs)
+- [x] Alpha Vantage loader within 25 requests/day (counted in `api_usage`): daily calendar (1 call, ~2,000 reports);
+      earnings history for liquid stocks (just-reported first, then by size; 17 biggest loaded on day 1). Estimate revisions: later, for candidates
+- [x] Finnhub: daily calendar snapshot with EPS/revenue estimates (10 weekly windows, ~2,300 reports) → `earnings_calendar`
+      keeps every day's snapshot (our own estimate history); view `upcoming_earnings`; weekly analyst rating counts (`analyst_ratings`)
 
 ### 2.1b Market snapshot (architecture §5.6)
-- [ ] Add cross-asset, global, style and theme ETFs to the reference symbols; backfill their history
-- [ ] FRED macro loader (rates, inflation, jobs, yields, credit spreads), point-in-time via FRED vintage dates (key in `.env` as `FRED_API_KEY`, verified 2026-11-06)
-- [ ] Daily `market_snapshot`: breadth, sector/theme rotation map, style, cross-asset, global, leaders, regime label
+- [x] 65 reference ETFs in `core/market/groups.py` (index, sector, theme, style, bonds/credit, commodities/currency, global); history loaded
+- [x] FRED loader: 23 series (rates, credit, inflation, jobs, growth, housing, dollar/oil, financial conditions); release
+      series keep the first-published value and publish date (`output_type=4`), plus the latest revised value
+- [x] Daily `market_snapshot` (migration 005): breadth, sector/theme rotation (leading/weakening/lagging/improving), style,
+      risk signals, global, leaders, top movers, regime label + exposure-dial level; dashboard **Market** page with
+      breadth history and the economy table; backfilled for the stored feature window
 
 ### 2.2 Strategies (plug-in interface, architecture §8)
 - [ ] Interface + loader for `strategies/{promoted,paper,experimental,retired}`
@@ -307,3 +318,5 @@ daily, and limits/failures defer cleanly.
 | 2026-11-06 | Bigdata.com tested: AMD search returned 9 highly relevant docs (Benzinga, CNBC, Globe and Mail, Motley Fool, Quartr transcript, podcasts) with per-passage sentiment; cost 22 of 1,000 starter credits per 10-passage search (premium news ≈ 75%). Decision: reserve for high-value cases only. Free substitutes verified: Finnhub company news (248 AMD articles Nov 3–6, ~1-year history), GDELT (free, 1 req / 5 s), Claude web search inside research runs. |
 | 2026-11-06 | **Phase 2 started: dashboard v1** at `localhost:8090` (FastAPI + one plain-JS page, light theme; launchd agent `com.ninad.tradebot.dashboard`). While building it, found that the **scheduler thread had died at 5:15 pm PT**: `scheduler.sync()` crashed on the one schedule with a payload dict (`**d` overwrote the JSON-encoded payload), and the exception escaped the loop while the heartbeat kept saying "healthy". Fixed: payload encoding; sync retried inside the loop; heartbeat now reports `scheduler_age_s` and live worker count; the daemon exits (launchd restarts it) if any thread dies; dashboard flags a scheduler with no pass in 5 min. Missed jobs ran on catch-up (gap check backfilled 74 stocks). Regression tests added; 32 tests pass. |
 | 2026-11-06 | Dashboard reachable from other Tailscale devices at **http://ichigo:8090** (also `http://ichigo.saanen-shark.ts.net:8090`, `http://100.85.155.36:8090`): it listens on localhost + the Tailscale address only (`dashboard.tailnet_hosts`), not on the Wi-Fi; if Tailscale isn't up at login it starts on localhost and adds the address when it appears. The user's existing `tailscale serve` / Funnel setup (ports 443 and 8443 → other local apps) was left untouched. |
+| 2026-11-06 | SEC backfill finished: 5,326 companies, 2.43M filings, 3.02M financial facts, 0 skipped; 5,246 / 5,431 stocks now have a sector. First backup: 0.76 GB. **Alpha Vantage** (free key) tested: earnings history with estimates since 1996, full calendar in 1 call, estimate revisions, transcripts free; news sentiment is premium. 25 requests/day. |
+| 2026-11-07 | **Features + market snapshot (2.1, 2.1b).** `features_daily` 2024→today; first snapshot (Nov 6): *Mixed: S&P 500 uptrend, only 45% of stocks above their 200-day average, risk-off* → exposure 50%; tech lagging (XLK −17% in a month), healthcare/staples/real estate leading. Earnings calendars (AV 1,983 + Finnhub 2,301 reports), AV earnings history for 17 largest stocks, 23 FRED series (33k observations). Fixes: (1) ETFs/ETNs/commodity and currency trusts that SEC lists as companies (QQQ, MicroSectors ETNs, Sprott trusts, CurrencyShares…) were counted as common stock → classifier patterns + reference ETFs always "etf"; universe now 5,364 companies + 65 ETFs (SPCX is SpaceX, correctly common). (2) Feature backfill memory: 500-column chunks and 20-day write batches (~1.2 GB peak). Learning: `11-our-daily-numbers.md`. |

@@ -24,6 +24,17 @@ SCHEDULES: list[dict] = [
      "priority": 55, "expires_minutes": 600},
     {"name": "survivorship_weekly", "task_type": "quality.survivorship", "cron": "0 9 * * 6",
      "priority": 30, "expires_minutes": 1440},
+    # ── Phase 2: earnings, analysts, macro (prices → features → market snapshot are chained, not scheduled) ──
+    {"name": "earnings_calendar_av", "task_type": "earnings.calendar_av", "cron": f"15 6 * * {WEEKDAYS}",
+     "priority": 66, "resource": "alphavantage", "expires_minutes": 600},
+    {"name": "earnings_calendar_finnhub", "task_type": "earnings.calendar_finnhub", "cron": f"20 6 * * {WEEKDAYS}",
+     "priority": 66, "resource": "finnhub", "expires_minutes": 600},
+    {"name": "earnings_history_av", "task_type": "earnings.history_av", "cron": "30 6 * * *",          # uses the rest of the daily budget
+     "priority": 30, "resource": "alphavantage", "expires_minutes": 900},
+    {"name": "analyst_ratings_weekly", "task_type": "analyst.ratings", "cron": "0 10 * * 6",
+     "priority": 25, "resource": "finnhub", "expires_minutes": 1440},
+    {"name": "macro_update", "task_type": "macro.update", "cron": f"5 9,18 * * {WEEKDAYS}",          # after 8:30 am releases; evening catch-up
+     "priority": 50, "resource": "fred", "expires_minutes": 360},
     {"name": "backup_nightly", "task_type": "system.backup", "cron": "0 2 * * *",
      "priority": 20, "expires_minutes": 600},
 ]

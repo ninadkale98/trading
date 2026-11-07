@@ -107,6 +107,7 @@ def daily(ctx: TaskContext) -> dict:
         queue.enqueue("prices.refactor", {"symbol": sym}, priority=55, dedupe_key=f"refactor:{sym}")
     latest = query("SELECT max(date) d FROM daily_prices")[0]["d"]
     queue.enqueue("liquidity.compute", {}, priority=60, dedupe_key="liquidity.compute")
+    queue.enqueue("features.daily", {}, priority=58, dedupe_key="features.daily")
     return {"summary": f"prices updated through {latest}: {len(symbols):,} symbols"
                        + (f"; {len(changed)} split/dividend adjustments queued" if changed else ""),
             "symbols": len(symbols), "rows": n, "latest": str(latest), "refactor": len(changed)}

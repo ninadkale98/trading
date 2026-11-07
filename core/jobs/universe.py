@@ -19,10 +19,13 @@ _PATTERNS = [
     ("preferred", re.compile(r"preferred|preference|\bpfd\b|\bprf\b|depositary shares? \(?(each )?(1/\d+|represent)|% series|"
                              r"perpetual|floating rate|non[- ]?cum", re.I)),
     ("spac", re.compile(r"acquisition corp|acquisition company|acquisition co\b|acquisition ltd|blank check|\bspac\b", re.I)),
-    ("special", re.compile(r"tender offer|dividend security|contingent value|\bcvr\b|escrow|liquidating trust", re.I)),
+    ("special", re.compile(r"tender offer|dividend security|contingent value|\bcvr\b|escrow|liquidating trust|"
+                           r"\bop, l\.p\.", re.I)),
     ("debt", re.compile(r"\bnotes? due\b|\bnotes?\b \d|debentures?|\bbonds?\b|% senior|subordinated", re.I)),
     ("etf", re.compile(r"\betfs?\b|\betn\b|index fund|\bishares\b|\bspdr\b|proshares|direxion|exchange[- ]traded|"
-                       r"\bfund\b|\bportfolio\b|\bstrategy shares\b|\bbitcoin trust\b|\bether trust\b", re.I)),
+                       r"\bfund\b|\bportfolio\b|\bstrategy shares\b|\betns\b|microsectors|\betracs\b|currencyshares|"
+                       r"physical .{0,40}trust|\b(gold|silver|platinum|palladium|copper) shares\b|\btrust,? series \d|"
+                       r"commodity index|\b(bitcoin|ether|ethereum|solana|xrp|crypto|carbon allowance) trust\b", re.I)),
 ]
 
 
@@ -68,8 +71,8 @@ def refresh(ctx: TaskContext) -> dict:
                     continue
                 srow = sec_rows.get(sec_symbol(a["symbol"])) if status == "active" else None
                 kind = classify(a, srow)
-                if a["symbol"] in refs and kind != "common":
-                    kind = "etf"
+                if a["symbol"] in refs:
+                    kind = "etf"           # our reference ETFs are never company stock (QQQ is in SEC's list as a trust)
                 is_universe = status == "active" and bool(a.get("tradable")) and (
                     kind == "common" or a["symbol"] in refs)
                 kinds[(status, kind)] += 1
