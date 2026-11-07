@@ -51,6 +51,9 @@ def request(client: httpx.Client, limiter: RateLimiter, resource: str, method: s
     if r.status_code == 429 or (r.status_code == 403 and "rate threshold" in r.text.lower()):
         wait = int(r.headers.get("Retry-After", "60") or 60)
         raise ResourceLimited(resource, datetime.now(timezone.utc) + timedelta(seconds=max(wait, 30)), f"{resource} rate limited (429)")
+    if r.status_code in (502, 503, 504):
+        # the service is down or overloaded (e.g. SEC maintenance): pause it without burning retries
+        raise ResourceLimited(resource, datetime.now(timezone.utc) + timedelta(minutes=15), f"{resource} unavailable ({r.status_code})")
     if r.status_code >= 500:
         raise RetryLater(f"{resource} server error {r.status_code}")
     if r.status_code >= 400:

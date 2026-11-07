@@ -67,8 +67,12 @@ def _load_facts(ciks: list[int], until: date) -> pd.DataFrame:
     df = df[df["unit"].isin(["USD", "shares"]) | df["concept"].str.startswith("dei")]
     # first filing of each period only (point-in-time; restatements ignored)
     df = df.sort_values("filed").drop_duplicates(["cik", "concept", "period_start", "period_end"], keep="first")
+    bad = pd.Series(False, index=df.index)
     for c in ("period_start", "period_end", "filed"):
-        df[c] = pd.to_datetime(df[c])
+        raw = df[c]
+        df[c] = pd.to_datetime(raw.astype(str).where(raw.notna()), errors="coerce")   # typos like year 0202 → NaT
+        bad |= (raw.notna() & df[c].isna()) | (df[c] < "1990-01-01")
+    df = df[~(bad | df["period_end"].isna() | df["filed"].isna())]
     df["days"] = (df["period_end"] - df["period_start"]).dt.days
     return df
 

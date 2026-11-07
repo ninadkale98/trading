@@ -39,3 +39,13 @@ def test_point_in_time_and_label_merge():
     assert len(merged) == 2 and set(merged["value"]) == {50, 79}
     ev = F.company_events(f.assign(concept=REV))
     assert ev.index.min() == pd.Timestamp("2024-05-01")                 # nothing visible before the first filing date
+
+
+def test_typo_dates_are_dropped(monkeypatch):
+    rows = [{"cik": 1, "concept": REV, "unit": "USD", "period_start": "0202-02-01", "period_end": "2022-04-30",
+             "filed": "2023-06-14", "value": 5.0},
+            {"cik": 1, "concept": REV, "unit": "USD", "period_start": "2022-02-01", "period_end": "2022-04-30",
+             "filed": "2022-06-14", "value": 7.0}]
+    monkeypatch.setattr(F, "query", lambda sql, params: rows)
+    df = F._load_facts([1], pd.Timestamp("2026-01-01").date())
+    assert list(df["value"]) == [7.0]
