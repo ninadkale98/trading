@@ -13,6 +13,8 @@ def daily(ctx: TaskContext) -> dict:
     day = query("SELECT max(date) d FROM features_daily WHERE symbol='SPY'")[0]["d"]
     snap = snapshot.compute(day)
     snapshot.store(snap)
+    from core.tasks import queue
+    queue.enqueue("trading.eod", {}, priority=56, dedupe_key="trading.eod")
     return {"summary": f"market {snap['date']}: {snap['regime']}", "date": snap["date"], "exposure": snap["exposure"]}
 
 

@@ -40,6 +40,22 @@ SCHEDULES: list[dict] = [
      "priority": 62, "resource": "claude:haiku", "expires_minutes": 25},
     {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # older news, with leftover daily budget
      "payload": {"days": 90, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},
+    # ── Re-plan step B: daily market analysis + predictions ──
+    {"name": "predictions_score", "task_type": "predictions.score", "cron": f"45 17 * * {WEEKDAYS}",
+     "priority": 56, "expires_minutes": 600},
+    {"name": "market_analysis", "task_type": "ai.market_analysis", "cron": f"0 21 * * {WEEKDAYS}",
+     "priority": 70, "resource": "claude:opus", "expires_minutes": 600},
+    # ── Re-plan step E: trading (dry run or paper; evening steps are chained after the market snapshot) ──
+    {"name": "trading_open", "task_type": "trading.open", "cron": f"20 9 * * {WEEKDAYS}",
+     "priority": 90, "expires_minutes": 30},
+    {"name": "trading_sync", "task_type": "trading.sync", "cron": f"*/15 10-15 * * {WEEKDAYS}",
+     "priority": 85, "expires_minutes": 14},
+    {"name": "trading_sync_close", "task_type": "trading.sync", "cron": f"10 16 * * {WEEKDAYS}",
+     "priority": 85, "expires_minutes": 60},
+    {"name": "briefing_daily", "task_type": "briefing.daily", "cron": f"30 21 * * {WEEKDAYS}",
+     "priority": 60, "expires_minutes": 600},
+    {"name": "briefing_morning", "task_type": "briefing.daily", "cron": f"30 6 * * {WEEKDAYS}",   # refresh with overnight changes
+     "priority": 60, "expires_minutes": 120},
     {"name": "backup_nightly", "task_type": "system.backup", "cron": "0 2 * * *",
      "priority": 20, "expires_minutes": 600},
 ]

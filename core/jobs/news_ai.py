@@ -87,6 +87,15 @@ def label(batch: list[dict], task_id: int | None = None) -> int:
 
 @task("news.triage", resource="claude:haiku", priority=62, description="Haiku reads new headlines: company, event, direction, importance")
 def triage(ctx: TaskContext) -> dict:
+    import psycopg
+    from core.config import settings
+    with psycopg.connect(settings()["database"]["dsn"], autocommit=True) as lock:   # held for the whole run, then closed
+        if not lock.execute("SELECT pg_try_advisory_lock(424201)").fetchone()[0]:
+            return {"summary": "news triage already running; skipped"}
+        return _triage(ctx)                      # the lock is released when this connection closes
+
+
+def _triage(ctx: TaskContext) -> dict:
     max_items = int(ctx.payload.get("max_items", 2000))
     days = int(ctx.payload.get("days", 3))
     items = pending(max_items, days)

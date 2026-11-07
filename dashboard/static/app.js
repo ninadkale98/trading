@@ -85,7 +85,14 @@ const views = {
       <h1>Review</h1><p class="sub">Your daily 10–15 minutes: what needs you, and what happened.</p>
       <div class="card"><h2>Needs attention</h2>${alertsBlock(d.attention)}</div>
       <div class="card"><h2>Decisions needed</h2>
-        ${d.approvals.length ? "" : `<div class="placeholder">No approval requests. Conviction bets, emerging stocks and other unusual trades will wait here for your OK once paper trading starts (Phase 2.6).</div>`}
+        ${d.approvals.length ? d.approvals.map((a) => `<div class="card" style="margin:8px 0">
+            <div class="row"><b>#${a.id} ${esc(a.title)}</b><span class="spacer"></span><span class="small muted">deadline ${when(a.deadline)}</span></div>
+            <p class="small"><b class="up">For:</b> ${esc(a.case_for || "")}</p><p class="small"><b class="down">Against:</b> ${esc(a.case_against || "")}</p>
+            <p class="small muted">Risk ${money(a.risk_dollars, 0)} · position ${money(a.position_value, 0)} · limit ${money(a.limit_price)} · stop ${money(a.stop)}</p>
+            <div class="row"><button class="primary" onclick="act('/api/approvals/${a.id}',{approve:true,size:1})">Approve</button>
+              <button onclick="act('/api/approvals/${a.id}',{approve:true,size:0.5})">Approve half size</button>
+              <button onclick="act('/api/approvals/${a.id}',{approve:false})">Reject</button></div></div>`).join("")
+          : `<div class="placeholder">No approval requests. Thinly traded stocks, conviction bets and other unusual trades wait here for your OK. No answer by 9:15 am ET means no trade.</div>`}
       </div>
       <div class="card md"><h2>Daily briefing ${d.briefing ? `<span class="muted small">${esc(d.briefing.date)}</span>` : ""}</h2>
         ${d.briefing ? md(d.briefing.markdown) : `<div class="placeholder">The first daily briefing is published at 9:30 pm ET once the briefing step is built (Phase 2.7).</div>`}
@@ -150,6 +157,56 @@ const views = {
       <div class="card"><h2>Leaders</h2><p class="small muted">Strongest liquid stocks in uptrends, within 5% of their 52-week high.</p>${table(sHead, stockRows(m.leaders || []), "No stocks meet the leader rules today.")}</div>
       <div class="grid"><div class="card"><h2>Biggest gainers today</h2>${table(sHead, stockRows(m.top_gainers || []))}</div>
         <div class="card"><h2>Biggest losers today</h2>${table(sHead, stockRows(m.top_losers || []))}</div></div>`;
+  },
+
+  async journal(param) {
+    const d = await api("/api/journal" + (param ? `?day=${encodeURIComponent(param)}` : ""));
+    const sc = d.score || {};
+    const preds = d.predictions.map((p) => `<tr><td class="small">${esc(p.made_on)}</td><td>${esc(p.statement)}<div class="small muted">${esc(p.reasoning || "")}</div></td>
+      <td class="num">${num(p.probability * 100, 0)}%</td><td class="num">${p.horizon_days}d</td>
+      <td>${badge(p.status, { right: "good", wrong: "bad", open: "info", void: "mute" }[p.status])}</td>
+      <td class="num ${cls(p.outcome)}">${p.outcome == null ? "" : pct(p.outcome * 100, 1)}</td></tr>`);
+    const days = d.days.map((x) => `<a class="btn" href="#journal/${x.date}">${esc(String(x.date).slice(5))}</a>`).join(" ");
+    return `<h1>Journal</h1><p class="sub">Opus's daily market analysis (written at 9 pm ET) and every prediction it made, scored automatically.</p>
+      <div class="kpis"><div class="kpi"><div class="label">Predictions scored</div><div class="value">${num(sc.n)}</div><div class="note">${d.predictions.filter((p) => p.status === "open").length} still open</div></div>
+        <div class="kpi"><div class="label">Hit rate</div><div class="value">${sc.n ? num(sc.hit * 100, 0) + "%" : "—"}</div><div class="note">vs stated confidence ${sc.n ? num(sc.conf * 100, 0) + "%" : "—"}</div></div></div>
+      <div class="card"><div class="row">${days || '<span class="muted">No analyses yet.</span>'}</div></div>
+      <div class="card md">${d.analysis ? md(d.analysis) : '<p class="muted">Nothing for this day.</p>'}</div>
+      <div class="card"><h2>Predictions</h2>${table(["Made", "Prediction", "#Prob.", "#Horizon", "Status", "#Outcome"], preds, "No predictions yet.")}</div>`;
+  },
+
+  async trading() {
+    const d = await api("/api/trading");
+    const dry = d.mode === "dry_run";
+    const plans = d.plans.map((p) => `<tr><td class="small">${esc(p.trade_date)}</td><td>${badge(p.side, p.side === "buy" ? "info" : "warn")}</td>
+      <td><b>${esc(p.symbol)}</b><div class="small muted">${esc(p.strategy)}</div></td><td class="num">${num(p.shares)}</td>
+      <td class="num">${p.limit_price ? money(p.limit_price) : "market"}</td><td class="num">${p.stop ? money(p.stop) : ""}</td>
+      <td class="num">${money(p.position_value, 0)}<div class="small muted">risk ${money(p.risk_dollars, 0)}</div></td>
+      <td>${badge(p.status, { simulated: "good", filled: "good", planned: "mute", waiting_approval: "warn", expired: "mute", rejected: "bad", error: "bad", submitted: "info" }[p.status] || "mute")}
+        <div class="small muted">${esc(p.error || "")}</div></td></tr>`);
+    const book = d.book.map((b) => { const r = b.last ? b.last / b.entry_price - 1 : 0, spy = b.spy_entry && b.spy_last ? b.spy_last / b.spy_entry - 1 : null;
+      return `<tr><td><b>${esc(b.symbol)}</b><div class="small muted">${esc(b.strategy)}</div></td><td class="small">${esc(b.entry_date)}</td>
+      <td class="num">${num(b.shares)}</td><td class="num">${money(b.entry_price)}</td><td class="num">${money(b.last)}</td>
+      <td class="num ${cls(r)}">${pct(r * 100, 1)}<div class="small muted">SPY ${spy == null ? "—" : pct(spy * 100, 1)}</div></td>
+      <td class="num">${money(b.stop)}${b.trail_pct ? `<div class="small muted">trails ${num(b.trail_pct * 100, 0)}%</div>` : ""}</td></tr>`; });
+    const closed = d.closed.map((c) => `<tr><td><b>${esc(c.symbol)}</b><div class="small muted">${esc(c.strategy)}</div></td>
+      <td class="small">${esc(c.entry_date)} → ${esc(c.exit_date)}</td><td class="num ${cls(c.pnl)}">${money(c.pnl, 0)}</td>
+      <td class="num ${cls(c.exit_price / c.entry_price - 1)}">${pct((c.exit_price / c.entry_price - 1) * 100, 1)}</td><td class="small">${esc(c.exit_reason)}</td></tr>`);
+    const stats = d.stats.map((s) => `<tr><td>${esc(s.strategy)}</td><td class="num">${num(s.n)}</td><td class="num">${num(s.win * 100, 0)}%</td>
+      <td class="num ${cls(s.avg_ret)}">${pct(s.avg_ret * 100, 2)}</td><td class="num ${cls(s.pnl)}">${money(s.pnl, 0)}</td></tr>`);
+    const cands = d.candidates.map((c) => `<tr><td>${esc(c.strategy)}</td><td><b>${esc(c.symbol)}</b></td><td class="num">${money(c.close)}</td>
+      <td class="num">${money(c.stop)}</td><td class="num">${num(c.score, 2)}</td></tr>`);
+    const unreal = d.book.reduce((s, b) => s + ((b.last || b.entry_price) - b.entry_price) * b.shares, 0);
+    const realized = d.closed.reduce((s, c) => s + (c.pnl || 0), 0);
+    return `<h1>Trading</h1><p class="sub">${dry ? "<b>Dry run</b>: plans are simulated against real prices each evening (a forward test; no orders sent)."
+        : "<b>Paper trading</b> on the Alpaca practice account."} All strategies are experimental, so each trade risks 0.5% of the account.</p>
+      <div class="kpis"><div class="kpi"><div class="label">Open positions</div><div class="value">${d.book.length}</div><div class="note">unrealized ${money(unreal, 0)}</div></div>
+        <div class="kpi"><div class="label">Closed trades</div><div class="value">${d.closed.length}</div><div class="note">realized ${money(realized, 0)}</div></div></div>
+      <div class="card"><h2>Plans</h2>${table(["Session", "Side", "Stock", "#Shares", "#Limit", "#Stop", "#Value", "Status"], plans, "No plans yet: the first are made after Monday's close.")}</div>
+      <div class="card"><h2>Open positions</h2>${table(["Stock", "Since", "#Shares", "#Entry", "#Last", "#Return", "#Stop"], book, "None yet.")}</div>
+      <div class="card"><h2>By strategy (closed trades)</h2>${table(["Strategy", "#Trades", "#Win rate", "#Avg return", "#P&L"], stats, "No closed trades yet.")}</div>
+      <div class="card"><h2>Closed trades</h2>${table(["Stock", "Held", "#P&L", "#Return", "Exit"], closed, "None yet.")}</div>
+      <div class="card"><details><summary>Candidates on ${esc(d.candidates_date || "—")}</summary>${table(["Strategy", "Stock", "#Close", "#Stop", "#Score"], cands)}</details></div>`;
   },
 
   async live() {
@@ -357,7 +414,7 @@ function lines(hist, spy) {
 }
 
 // ── Router + refresh loop ─────────────────────────────────────────────────────────────────────────────────
-const REFRESH = { review: 30, market: 120, lab: 300, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
+const REFRESH = { review: 30, journal: 300, trading: 60, market: 120, lab: 300, live: 10, today: 20, portfolio: 60, data: 120, health: 20 };
 let timer = null, busy = false;
 
 function route() {

@@ -139,6 +139,7 @@ def financials_refresh(ctx: TaskContext) -> dict:
             ctx.log(f"financials refresh: skipped CIK {ciks[i]} ({type(e).__name__}: {e})")
         if (i + 1) % 25 == 0 or i + 1 == len(ciks):
             ctx.checkpoint(done=i + 1, facts=facts, skipped=skipped)
+    queue.enqueue("features.backfill", {}, priority=40, dedupe_key="features.backfill")   # rebuild stored fundamentals
     return {"summary": f"financials refreshed: {len(ciks):,} companies, {facts:,} facts" + (f", {len(skipped)} skipped" if skipped else ""),
             "facts": facts, "skipped": skipped}
 

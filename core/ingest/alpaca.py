@@ -48,6 +48,16 @@ def trading(path: str, params: dict | None = None) -> dict | list:
     return get(f"{_cfg['trading_url']}{path}", params)
 
 
+def trading_send(method: str, path: str, body: dict | None = None):
+    """Write call on the PAPER trading API (orders). The base URL is the paper endpoint from settings; this function
+    refuses to run against anything else, so real-money endpoints can't be reached by mistake."""
+    base = _cfg["trading_url"]
+    if "paper-api" not in base:
+        raise RuntimeError("trading_send only works against the Alpaca PAPER endpoint")
+    r = request(client(), _limiter, RESOURCE, method, f"{base}{path}", json=body)
+    return r.json() if r.content else None
+
+
 def assets(status: str) -> list[dict]:
     return get(f"{_cfg['trading_url']}/v2/assets", {"status": status, "asset_class": "us_equity"})
 

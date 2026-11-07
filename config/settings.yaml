@@ -36,6 +36,12 @@ retry:
 features:
   store_from: "2024-01-01"        # features are stored from here on; older dates are recomputed on demand (backtests)
 
+trading:
+  mode: dry_run                   # dry_run = simulate plans against real prices (no orders) · paper = Alpaca PAPER orders
+  max_positions: 20
+  max_new_per_strategy_per_day: 2
+  entry_limit_above_close: 0.01   # buy limit = yesterday's close + 1% (don't chase big gaps)
+
 ai:
   # Daily caps for BACKGROUND jobs, in pay-per-use-equivalent dollars (a usage meter; the Max plan itself is flat-rate).
   # Keeps room in the plan for the user's own chats. Tune after a week of real usage (dashboard → Live).

@@ -11,6 +11,10 @@
   tradebot events [-n N]               recent timeline
   tradebot daemon                      run the background service (normally started by launchd)
   tradebot dashboard                   run the dashboard web server on localhost:8090 (normally started by launchd)
+  tradebot approvals                   list trades waiting for the user's approval
+  tradebot approve ID [--size 0.5] [--comment ...]    approve (optionally smaller)
+  tradebot reject ID [--comment ...]   reject (safe default)
+  tradebot plan                        show tomorrow's trade plan
 """
 from __future__ import annotations
 
@@ -42,7 +46,33 @@ def main(argv: list[str] | None = None) -> int:
     ev = sub.add_parser("events"); ev.add_argument("-n", type=int, default=25)
     sub.add_parser("daemon")
     sub.add_parser("dashboard")
+    sub.add_parser("approvals")
+    sub.add_parser("plan")
+    ap_ = sub.add_parser("approve"); ap_.add_argument("id", type=int); ap_.add_argument("--size", type=float, default=1.0)
+    ap_.add_argument("--comment")
+    rj = sub.add_parser("reject"); rj.add_argument("id", type=int); rj.add_argument("--comment")
     a = p.parse_args(argv)
+
+    if a.cmd in ("approvals", "approve", "reject"):
+        from core.planner import approvals
+        if a.cmd == "approvals":
+            rows = approvals.pending()
+            for r in rows:
+                print(f"#{r['id']} [{r['kind']}] {r['title']} · deadline {r['deadline']:%a %H:%M} · "
+                      f"risk ${r['risk_dollars'] or 0:,.0f}\n    for: {r['case_for'] or ''}\n    against: {r['case_against'] or ''}")
+            print(f"{len(rows)} pending")
+        elif a.cmd == "approve":
+            print(approvals.decide(a.id, True, a.size, a.comment))
+        else:
+            print(approvals.decide(a.id, False, comment=a.comment))
+        return 0
+    if a.cmd == "plan":
+        from core.db import query as q
+        for r in q("""SELECT trade_date, mode, side, strategy, symbol, shares, limit_price, stop, position_value, status FROM trade_plans
+                      WHERE trade_date >= current_date - 1 ORDER BY trade_date, side DESC, strategy"""):
+            print(f"{r['trade_date']} {r['mode']:<7} {r['side']:<4} {r['symbol']:<6} {r['shares']:>5} @ ≤{r['limit_price'] or 0:>8.2f} "
+                  f"stop {r['stop'] or 0:>8.2f} ${r['position_value'] or 0:>9,.0f}  {r['strategy']:<22} {r['status']}")
+        return 0
 
     if a.cmd == "dashboard":
         from dashboard.app import serve

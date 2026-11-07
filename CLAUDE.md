@@ -13,6 +13,15 @@ add new concepts to `learning/` (keep `learning/glossary.md` in sync).
 - Do not give personalized buy/sell advice; present data, both sides, and risk rules.
 - Saved scan: "Quality Uptrend Pullback" (`5c72f6ca-0824-4dd5-a44c-ded2a2386141`), explained in `learning/08-our-scan-explained.md`.
 
+## The running system (daemon + dashboard)
+- Dashboard: http://ichigo:8090 (Tailscale) or localhost:8090. Status: `.venv/bin/tradebot status`, `tradebot plan`.
+- Trading mode is `config/settings.yaml → trading.mode` (`dry_run` = simulated against real prices, `paper` = Alpaca PAPER
+  orders). Switch to `paper` only when the user says so.
+- **Approvals in chat:** when the user says "approve #3", "approve #3 half size" or "reject #3", run
+  `.venv/bin/tradebot approve 3 [--size 0.5] [--comment "..."]` / `tradebot reject 3`. List with `tradebot approvals`.
+- Daily: news read by Haiku every 30 min; 4:40 pm prices → features → snapshot → settle session → plan; 9 pm Opus
+  market analysis (reports/market/); 9:30 pm briefing (reports/daily/).
+
 ## Alpaca (paper trading + market data)
 - Keys are in `.env` (`ALPACA_KEY_ID`, `ALPACA_SECRET_KEY`); it is a **paper** account ($100k practice money). Never print or echo the key values.
 - Use full-market data with `feed=sip` and an `end` at least 16 minutes in the past (the free plan requires that). `feed=iex` has only one exchange's volume, so don't use it for volume.
