@@ -32,3 +32,4 @@ retry:
 dashboard:
   host: "127.0.0.1"               # local only; open through VS Code port forwarding
   port: 8090
+  tailnet_hosts: ["100.85.155.36"]   # ichigo's private Tailscale address → http://ichigo:8090 from other tailnet devices

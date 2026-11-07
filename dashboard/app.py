@@ -312,8 +312,51 @@ def run_schedule(name: str):
     return {"ok": True, "message": f"queued #{tid}" if tid else "already queued"}
 
 
+def _bind(host: str, port: int):
+    import socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((host, port))
+    return sock
+
+
 def serve() -> None:
+    """Listen on localhost, plus the private Tailscale address(es) in settings (never 0.0.0.0, so the page isn't on
+    the local Wi-Fi). If Tailscale isn't up yet (e.g. right after login), start on localhost and restart the listener
+    as soon as the Tailscale address can be bound."""
+    import logging
     import uvicorn
     cfg = settings().get("dashboard", {})
-    uvicorn.run(app, host=cfg.get("host", "127.0.0.1"), port=int(cfg.get("port", 8090)), log_level="warning",
-                access_log=False)
+    port = int(cfg.get("port", 8090))
+    extra = list(cfg.get("tailnet_hosts", []))
+    log = logging.getLogger("dashboard")
+    while True:
+        socks, missing = [_bind(cfg.get("host", "127.0.0.1"), port)], []
+        for h in extra:
+            try:
+                socks.append(_bind(h, port))
+            except OSError as e:
+                missing.append(h)
+                log.warning(f"tailnet address {h}:{port} not available yet ({e}); serving localhost only for now")
+        server = uvicorn.Server(uvicorn.Config(app, log_level="warning", access_log=False))
+        restart = threading.Event()
+
+        def watch():
+            while not server.should_exit:
+                time.sleep(30)
+                try:
+                    for h in missing:
+                        _bind(h, port).close()
+                    restart.set()
+                    server.should_exit = True   # address is up now: restart with it
+                    return
+                except OSError:
+                    continue
+
+        if missing:
+            threading.Thread(target=watch, daemon=True).start()
+        server.run(sockets=socks)
+        for sck in socks:
+            sck.close()
+        if not restart.is_set():
+            break

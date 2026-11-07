@@ -622,7 +622,7 @@ instead of piling up. Every run, error and AI call is logged (`runs`, `errors`, 
 ## 16. Dashboard
 
 Local web app on the always-on Mac (FastAPI + a simple live-updating page), reading the same PostgreSQL.
-Opened at `localhost:8090` through VS Code's SSH port forwarding; phone access later through a private network tool such as Tailscale.
+Opened at `localhost:8090` (VS Code port forwarding) or, from any device on the user's Tailscale network, at **http://ichigo:8090** (the server listens only on localhost and ichigo's private Tailscale address, never on the local Wi-Fi).
 
 **Theme:** light and clean: white and soft-gray backgrounds, dark readable text, green and red only for gains and losses,
 large text, single-column layout on phones.

@@ -17,7 +17,7 @@ brew services start postgresql@17 && createdb market
 .venv/bin/tradebot migrate
 ./scripts/install_services.sh          # background service + dashboard: start at login, restart if they crash
 .venv/bin/tradebot status              # heartbeat, queue, failures
-open http://localhost:8090             # dashboard (forward port 8090 in VS Code when connected over SSH)
+open http://localhost:8090             # dashboard; from other Tailscale devices: http://ichigo:8090
 .venv/bin/python -m pytest             # tests
 .venv/bin/python -m core.backtest.validate
 ```
