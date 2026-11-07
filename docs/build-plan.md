@@ -41,7 +41,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⏸ blocked
       On startup the system catches up: missed jobs run or expire, and the gap checker backfills missing data.
 - [x] Install **PostgreSQL 17 + pgvector** via Homebrew; start it as a service (starts on boot); create database `market`
 - [x] SEC EDGAR identity saved in `.env` as `SEC_USER_AGENT` (name + email; no account needed)
-- [x] `git init` done, `.gitignore` covers `.env`, `.venv/`, `.stockview/`, logs, backups. **No commit yet: commits only when the user asks.**
+- [x] Git repo on `main`, pushed to the **private** GitHub repo `ninadkale98/trading` (first commit 2026-11-06). `.gitignore` covers `.env`, `.venv/`, `.stockview/`, logs, backups, `.claude/settings.local.json`. Commit/push only when the user asks.
 
 **Done when:** `psql market` connects, ≥ 60 GB free, auto-restart on, git repo exists.
 
