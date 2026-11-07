@@ -41,4 +41,5 @@ def backfill(ctx: TaskContext) -> dict:
         ctx.checkpoint(years=sorted(done), rows=total)
         ctx.log(f"features {y}: {n:,} rows")
     queue.enqueue("market.backfill", {}, priority=35, dedupe_key="market.backfill")
+    queue.enqueue("strategies.plan", {}, priority=55, dedupe_key="strategies.plan")   # re-plan with the rebuilt numbers
     return {"summary": f"features stored from {start}: {total:,} rows", "rows": total}

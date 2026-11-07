@@ -62,6 +62,15 @@ def live_market(day: date, feature_days: int = 40):
         a = np.full(m.close.shape, np.nan, dtype=np.float32)
         a[ti[ok], si[ok]] = pd.to_numeric(df[c], errors="coerce").to_numpy(dtype=np.float32)[ok]
         m.f[c] = a
+    # Live planning: the latest earnings calendar is known before tomorrow's order, so it overrides the estimate
+    # stored with the features (which could only use calendar snapshots taken on or before that day).
+    t = len(m.dates) - 1
+    cal = query("SELECT symbol, report_date FROM upcoming_earnings WHERE report_date >= %s", (day,))
+    col = m._cols
+    for r in cal:
+        j = col.get(r["symbol"])
+        if j is not None:
+            m.f["days_to_earnings_est"][t, j] = (r["report_date"] - day).days
     return m
 
 
