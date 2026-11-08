@@ -43,9 +43,10 @@ trading:
   entry_limit_above_close: 0.01   # buy limit = yesterday's close + 1% (don't chase big gaps)
 
 ai:
-  # Daily caps for BACKGROUND jobs, in pay-per-use-equivalent dollars (a usage meter; the Max plan itself is flat-rate).
-  # Keeps room in the plan for the user's own chats. Tune after a week of real usage (dashboard → Live).
-  daily_budget_usd_equiv: {haiku: 3.0, sonnet: 8.0, opus: 6.0}
+  # Optional daily caps per model, in pay-per-use-equivalent dollars. Empty = NO cap (user's decision 2026-11-08: the
+  # Max plan's own 5-hour/weekly limits are the only limit; hitting one pauses that model's queue until it resets).
+  # Usage is still metered in ai_usage (dashboard → Live). To cap again: {haiku: 3.0, sonnet: 8.0, opus: 6.0}
+  daily_budget_usd_equiv: {}
 
 dashboard:
   host: "127.0.0.1"               # local only; open through VS Code port forwarding

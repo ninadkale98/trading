@@ -549,6 +549,10 @@ The system handles routine, rule-following work alone and **escalates anything u
   week, so a **budget scheduler** spreads work across windows: scheduled jobs (Opus plan/summary, earnings-day research)
   get reserved room, and **unused capacity in each window is filled** with lower-priority work (research rotation,
   catch-up chapters, case studies) instead of going to waste. Overflow option: pay-per-use API (Haiku is cheap).
+- **No daily caps (user decision, 2026-11-08).** Background jobs use the plan freely; the plan's own 5-hour and
+  weekly limits are the only limit. When Claude reports a usage limit, that model's queue pauses until the reset
+  time (ResourceLimited) and resumes by itself. Usage is still metered per call in `ai_usage`. Optional per-model
+  daily caps remain available in `settings.yaml → ai.daily_budget_usd_equiv` if the user ever wants them back.
 - Every Claude output is checked against a schema before it's written to the database.
 - Optional fallback: if Opus is still blocked hours later, Sonnet writes the daily summary, labeled as such.
 

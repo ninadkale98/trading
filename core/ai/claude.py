@@ -7,8 +7,8 @@ Runs headless Claude Code (`claude -p`) on the user's Max plan, with the model c
 
 Failure handling (architecture §14): a usage limit pauses that model's queue (ResourceLimited) until it resets;
 timeouts/crashes retry later; output that doesn't match the schema retries, then fails. Every call is logged in
-`ai_usage`. A per-model daily budget (settings.yaml → ai.daily_budget_usd_equiv) keeps background jobs from
-eating the whole plan; the user's own interactive use always has room.
+`ai_usage`. An optional per-model daily cap (settings.yaml → ai.daily_budget_usd_equiv) exists but is off by
+default: the Max plan's own limits are the only limit.
 """
 from __future__ import annotations
 
