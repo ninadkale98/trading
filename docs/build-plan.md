@@ -324,6 +324,11 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
 - [ ] Earnings-surprise history keeps filling free (Alpha Vantage 25/day + Finnhub); paid data only after a proven,
       profitable strategy, funded from its profit (user, 2026-11-08)
 
+- [ ] **Crash watch** (user idea, 2026-11-09; studies in lab/notebook.md): list of steadily big stocks ≥ 15% below
+      their 60-day high, with the heavy-volume day, volume trend, further fall and whether they've turned. In the
+      briefing and on the dashboard, refreshed every 15 min in market hours from Alpaca's (15-min delayed) bars.
+      Data for watching and learning, not a buy signal; trading it waits for the lab's `big_crash_capitulation` test.
+
 ### 4.2 Operating model: Claude's daily check-in
 - [x] A Claude Code session check-in runs daily ~7:07 pm PT (after the 9:30 pm ET briefing): health, today's outputs
       (lab round, briefing, analysis, errors), fixes, then the next unchecked item above, documented and committed.
