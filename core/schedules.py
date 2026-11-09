@@ -58,6 +58,13 @@ SCHEDULES: list[dict] = [
      "priority": 60, "expires_minutes": 120},
     {"name": "trade_review_weekly", "task_type": "review.weekly_trades", "cron": "0 10 * * 6",
      "priority": 40, "resource": "claude:opus", "expires_minutes": 1440},
+    # ── Phase 4: the self-improving loop ──
+    {"name": "lab_cycle_sunday", "task_type": "lab.cycle", "cron": "0 12 * * 0", "payload": {"ideas": 4},
+     "priority": 30, "resource": "lab", "expires_minutes": 1440},
+    {"name": "lab_cycle_wednesday", "task_type": "lab.cycle", "cron": "0 23 * * 3", "payload": {"ideas": 4},   # after the briefing
+     "priority": 30, "resource": "lab", "expires_minutes": 720},
+    {"name": "engineer_weekly", "task_type": "engineer.weekly", "cron": "30 12 * * 6",   # after the trade review; waits for review
+     "priority": 25, "resource": "claude:opus", "expires_minutes": 1440},
     {"name": "backup_nightly", "task_type": "system.backup", "cron": "0 2 * * *",
      "priority": 20, "expires_minutes": 600},
 ]

@@ -349,7 +349,18 @@ def lab(report: str | None = None):
     stages = {}
     for st in ("experimental", "paper", "promoted", "retired"):
         stages[st] = sorted(p.stem for p in (ROOT / "strategies" / st).glob("*.py") if not p.name.startswith("_"))
-    return {"runs": runs, "total_backtests": total, "reports": reports, "report": body, "stages": stages}
+    loop = {}
+    try:                                              # the self-improving loop (migration 014)
+        loop["rounds"] = query("SELECT id, started_at, finished_at, proposal_md, report_md, summary, feature_requests "
+                               "FROM lab_rounds ORDER BY id DESC LIMIT 6")
+        loop["ideas"] = query("""SELECT id, round_id, name, title, kind, parent, hypothesis, status, verdict, created_at,
+                                        results->'test'->'signal_study' AS signal_study FROM ideas ORDER BY id DESC LIMIT 40""")
+        loop["moves"] = query("SELECT ts, strategy, from_stage, to_stage, reason FROM strategy_moves ORDER BY id DESC LIMIT 20")
+        loop["engineer"] = query("SELECT id, started_at, status, branch, goal, summary_md, files, checks FROM engineer_runs "
+                                 "ORDER BY id DESC LIMIT 6")
+    except Exception:                                 # noqa: BLE001
+        pass
+    return {"runs": runs, "total_backtests": total, "reports": reports, "report": body, "stages": stages, "loop": loop}
 
 
 @app.get("/api/portfolio")

@@ -411,6 +411,53 @@ never repeated blindly.
 `core/` (data, backtester, risk, execution) or rewrite history. Promotion to real money is never
 automatic.
 
+### 9.1 The self-improving loop as built (2026-11-08)
+
+Two levels, each feeding the other. The AI proposes and builds; **fixed code** decides.
+
+```
+        ┌──────────────────────────── Level 1: strategy lab (automatic, Sun 12:00 + Wed 23:00 ET) ───────────────────────────┐
+        │ Opus PROPOSES ideas  →  Sonnet BUILDS a strategy file  →  sandbox validator  →  SMOKE (own process: runs, fast,      │
+        │ (reads notebook,        (lab/candidates/)                  (imports, no file/   no look-ahead)  →  TEST (own process:   │
+        │  all results, research,                                    network, no t+1)    look-ahead, signal study, 2016–2022     │
+        │  feature catalog)                                                              backtest + gates)  →  DECIDE (fixed     │
+        │      ▲                                                                         rules)  →  live experimental / paper /  │
+        │      │                                                                         retired  →  Opus REPORT → notebook      │
+        │      │ lessons, results                                         feature requests → lab/requests.md                    │
+        └──────┼───────────────────────────────────────────────────────────────────────────────┬──────────────────────────────┘
+               │                                                                               ▼
+        live dry-run/paper trades → trade journal → Saturday trade review → lessons   ┌── Level 2: engineer (weekly, Sat 12:30) ──┐
+                                                                                       │ Claude Code on its own git branch builds │
+                                                                                       │ one system improvement (usually a        │
+                                                                                       │ requested feature/data source); fixed    │
+                                                                                       │ checks; WAITS FOR REVIEW → merge → the   │
+                                                                                       │ lab can use the new features next round  │
+                                                                                       └──────────────────────────────────────────┘
+```
+
+**Decision rules (fixed in `core/jobs/lab.py`, written before any AI idea was tested):**
+
+| Decision | Rule |
+|---|---|
+| Reject | build/test error, look-ahead found, or < 30 signals in 2016–2022 |
+| Admit to live (experimental, 0.5% risk per trade) | "sign of life" in train: signal-study excess vs the eligible pool > 0 with overlap-adjusted t > 0.5 at 20 or 60 days, or backtest excess per trade > 0 with t > 1. **A low bar on purpose** (user's choice: many live experiments on paper money; live results decide) |
+| Promote to `paper/` | passed the strict train gates AND the unseen 2023–2024 years |
+| Retire (decay) | live ≥ 15 closed trades with average excess vs SPY < 0 and t < −1.5 |
+| Retire (cap) | more than 16 live strategies → the one with the weakest evidence (live t-stat after 10 closed trades, else the train t-stat); strategies admitted in the last ~4 weeks are protected |
+
+**Guards against fooling ourselves:** the sandbox validator (no imports beyond numpy/math/strategy helpers, no
+files/network/dunder/`while`, no index past day t), the runtime look-ahead check (a strategy's day-t answer must not
+change when later days are removed; the same check for features), AI code runs only in a separate process until it
+passes, every test counts toward the multiple-testing bar, and the gates, checks and money code are protected from
+both AI levels. The planner isolates each strategy, so a broken one can't stop the daily plan.
+
+**The engineer never merges by itself** (decided 2026-11-08). Its branch is checked automatically (protected paths
+untouched, nothing deleted, no migration edited, all tests pass, every live strategy passes the smoke check, feature
+look-ahead check if features changed) and then waits: the user says "merge engineer #N" or "reject engineer #N" in
+chat (`tradebot engineer-merge N` / `engineer-reject N`). It runs headless with no MCP servers (no broker access),
+edits only its worktree outside the repo, can't push, and explores the database through a read-only login
+(`tradebot_ro`).
+
 ---
 
 ## 10. Planner & portfolio
@@ -573,6 +620,8 @@ The system handles routine, rule-following work alone and **escalates anything u
 | **9:30 pm** | **Daily briefing published** (10–15 min read) with approval requests for tomorrow; review it in the evening or by 9:15 am |
 | Overnight | Backtests of new ideas, gap checker, database backup |
 | Saturday | Opus weekly review: promote, retire, new idea round; weekly picks report; **weekly money-flow map** and journal roll-up; **study of big moves** refreshed |
+| **Saturday 10:00 / 12:30** | Opus trade review → lab notebook · **engineer** builds one system improvement on a branch (waits for review) |
+| **Sunday 12:00, Wednesday 23:00** | **Idea-lab round:** propose → build → test → admit/retire → report (§9.1) |
 | Month end | Monthly scorecard |
 
 ---
@@ -747,4 +796,6 @@ The detailed, step-by-step checklist with progress tracking is in **[build-plan.
 | Market understanding | **Decided:** daily market snapshot (breadth, rotation, style, cross-asset, global, macro), Opus daily market analysis for learning, weekly money-flow map (§5.6, §17) |
 | Memory | **Decided:** daily checkpoints at market, theme and stock level, weekly/monthly/quarterly roll-ups, predictions log, read-only search toolkit for the AI (§5.5) |
 | Study of big moves | **Decided:** what came before big winners and losers vs look-alikes that didn't move (§9) |
-| Daily AI budget numbers (research companies/day, Haiku batch frequency) | Open: tune in Phase 3 |
+| Daily AI budget numbers (research companies/day, Haiku batch frequency) | **Decided (2026-11-08):** no daily caps; the Max plan's own limits are the only limit (§12) |
+| Self-improvement | **Decided (2026-11-08):** two-level loop (§9.1). Strategy lab fully automatic with a low admission bar (paper money, learning first); the system-level engineer builds on a branch and **never merges without the user's OK** |
+| Minimum position size | **Decided:** none; tiny trades are fine while learning |

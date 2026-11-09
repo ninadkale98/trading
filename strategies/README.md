@@ -11,3 +11,7 @@ One file per idea, subclassing `core.strategy.base.FeatureStrategy`. The folder 
 
 Every backtest is recorded in `backtest_runs` (multiple-testing counter). Results are written to `lab/experiments/`.
 Run the lab: `.venv/bin/python -m core.lab.run --period train` (see `core/lab/run.py`).
+
+AI-written strategies come from the self-improving lab (`core/jobs/lab.py`, architecture §9.1): built in
+`lab/candidates/`, checked by `core/lab/sandbox.py` and `core/lab/lookahead.py`, tested in a separate process, then moved
+here by fixed rules. Every move is logged in `strategy_moves`.

@@ -19,6 +19,7 @@ import pandas as pd
 
 from core.backtest.data import load
 from core.config import limits, settings
+from core.log import event
 from core.db import conn, query
 from core.features.build import COLUMNS, info_for, universe
 from core.strategy.base import load as load_strategies
@@ -111,8 +112,13 @@ def plan_day(day: date | None = None) -> dict:
     with conn() as c:
         c.execute("DELETE FROM strategy_candidates WHERE date=%s", (day,))
         for s in strategies:
-            s.prepare(m)
-            got = s.candidates(t, held)
+            try:                                  # one broken (e.g. AI-written) strategy must never stop the plan
+                s.prepare(m)
+                got = s.candidates(t, held)
+            except Exception as e:                # noqa: BLE001
+                event("strategy", f"{s.name} failed while planning {day}: {e}", level="error")
+                by_name.pop(s.name, None)
+                continue
             cands[s.name] = got
             for cd in got:
                 c.execute("""INSERT INTO strategy_candidates (date, strategy, stage, symbol, score, close, stop, target, trail_pct,
@@ -143,8 +149,12 @@ def plan_day(day: date | None = None) -> dict:
         rep = reports.get(b["symbol"])
         if reason is None and rep and not (st is not None and st.holds_through_earnings):
             reason = f"earnings on {rep['report_date']:%a %b %d} {rep['time_of_day'] or ''}: sell before the report".strip()
-        if reason is None and st is not None and b["symbol"] in st.exits(t, m, {b["symbol"]}):
-            reason = "strategy exit signal"
+        if reason is None and st is not None:
+            try:
+                if b["symbol"] in st.exits(t, m, {b["symbol"]}):
+                    reason = "strategy exit signal"
+            except Exception as e:                # noqa: BLE001
+                event("strategy", f"{st.name}.exits failed for {b['symbol']}: {e}", level="error")
         if reason:
             plans.append(dict(strategy=b["strategy"], symbol=b["symbol"], side="sell", shares=b["shares"], limit_price=None,
                               stop=None, target=None, trail_pct=None, max_hold=None, risk_dollars=0, risk_pct=0,

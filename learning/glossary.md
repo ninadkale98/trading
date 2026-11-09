@@ -43,6 +43,7 @@ The number in brackets is the file with the full explanation.
 | **EPS** | Earnings per share = net income ÷ shares [2] |
 | **Exposure dial** | How much of the account the system keeps invested, based on market conditions [11] |
 | **Falling knife** | A stock that's crashing; risky to buy mid-fall [5] |
+| **Feature request** | Data or a number the idea lab wishes it had; the weekly engineer builds it [14] |
 | **Fed funds rate** | The Federal Reserve's main interest rate [11] |
 | **Float** | Shares available for public trading [3] |
 | **Form 4** | SEC filing for an insider's purchase or sale; code P = open-market buy [9] |
@@ -50,12 +51,14 @@ The number in brackets is the file with the full explanation.
 | **Free cash flow** | Cash generated minus capex [1] |
 | **GAAP** | Official US accounting rules [1] |
 | **Gap** | Stock opens far from the previous close, leaving a hole on the chart [4] |
+| **Git branch** | A separate copy of the code's history where changes are made without touching the running version [14] |
 | **Gross margin** | Gross profit ÷ revenue: cents kept per $1 after making the product [1] |
 | **Gross profit** | Revenue − cost of making the product [1] |
 | **Growth / Value** | Fast-growing, often expensive companies / cheap, steady companies [10] |
 | **GTC** | Good 'til canceled: an order stays open across days [7] |
 | **Guidance** | The company's forecast for upcoming quarters [2] |
 | **Hindsight bias** | After the fact, the reason always looks obvious [10] |
+| **Hypothesis** | Why an idea should work, written before testing, including what result would prove it wrong [14] |
 | **Income statement** | Report of revenue, costs and profit over a period [1] |
 | **Jobless claims** | Weekly count of new unemployment filings: the earliest job-market warning [11] |
 | **Limit order** | Buy or sell only at your price or better [7] |
@@ -65,6 +68,7 @@ The number in brackets is the file with the full explanation.
 | **Market cap** | Price × shares = the value of the whole company [3] |
 | **Market order** | Buy or sell immediately at the best available price [7] |
 | **Moving average (MA)** | Average closing price over the last N days [5] |
+| **Multiple testing** | Trying many ideas makes some look good by luck, so each extra test raises the bar [14] |
 | **Net income** | Final profit after all costs [1] |
 | **Net margin** | Net income ÷ revenue [1] |
 | **OHLC** | Open, High, Low, Close [4] |
@@ -78,6 +82,7 @@ The number in brackets is the file with the full explanation.
 | **Price target** | Analyst's expected price in about 12 months [6] |
 | **Priced in** | The market already expects it, so the news doesn't move the price much [10] |
 | **Pullback** | A temporary dip inside an uptrend [5] |
+| **Random twin** | Same number of picks and exits as a strategy, but random stocks: the fairness check [14] |
 | **Real yield** | An interest rate minus expected inflation [11] |
 | **Relative strength** | How a stock or group performs compared with SPY or its sector [10] |
 | **Relative volume (RVOL)** | Today's volume ÷ average volume [4] |
@@ -90,10 +95,13 @@ The number in brackets is the file with the full explanation.
 | **RS rank** | A stock's past-year performance rank among all stocks, 1–99 [11] |
 | **RSI** | Relative Strength Index, a 0–100 momentum score [5] |
 | **Russell 1000** | Index of the ~1,000 largest US companies [8] |
+| **Sandbox** | Rules that limit what AI-written code may do (math only: no files, internet or future data) [14] |
 | **Sector** | Industry group (Technology, Energy, Healthcare and so on) [7] |
+| **Self-improving loop** | Propose → test → keep what works → learn → propose better; each turn uses the last one's lessons [14] |
 | **Settlement (T+1)** | Sale cash becomes usable 1 business day later [7] |
 | **Shares outstanding** | All shares that exist [3] |
 | **SIC code** | The SEC's industry code for a company, mapped to our 11 sectors [9] |
+| **Signal study** | Do the stocks a rule picks beat the average stock over the next weeks? No stops or exits involved [14] |
 | **Split** | One share becomes several smaller shares; not a real gain or loss [9] |
 | **Spread** | Ask − Bid [4] |
 | **Stop-loss** | Automatic sell if the price falls to your level [7] |

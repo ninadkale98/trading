@@ -19,6 +19,11 @@ add new concepts to `learning/` (keep `learning/glossary.md` in sync).
   orders). Switch to `paper` only when the user says so.
 - **Approvals in chat:** when the user says "approve #3", "approve #3 half size" or "reject #3", run
   `.venv/bin/tradebot approve 3 [--size 0.5] [--comment "..."]` / `tradebot reject 3`. List with `tradebot approvals`.
+- **Self-improving loop** (docs/architecture.md §9.1, learning/14): `lab.cycle` Sun 12:00 + Wed 23:00 ET is automatic
+  (AI-written strategies go live in dry run/paper by fixed rules). The weekly engineer (Sat 12:30 ET) builds on a branch
+  and **never merges by itself**: when the user says "merge engineer #N" run `.venv/bin/tradebot engineer-merge N`
+  (review the diff first and tell the user what it does); "reject engineer #N" → `tradebot engineer-reject N`.
+  Status: `tradebot lab`, `tradebot engineer`.
 - Daily: news read by Haiku every 30 min; 4:40 pm prices → features → snapshot → settle session → plan; 9 pm Opus
   market analysis (reports/market/); 9:30 pm briefing (reports/daily/).
 

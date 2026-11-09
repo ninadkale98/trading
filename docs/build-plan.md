@@ -14,7 +14,7 @@
 | 1 | Foundation: database, task system, data loaders, backtester | 🟡 Code done; historical backfills running | 2026-11-06 | |
 | 2 | Paper-trading MVP: features, strategies, planner, Alpaca execution, approvals, briefing, basic dashboard | 🟡 Dashboard, features, market snapshot, earnings + macro data done; strategies next | 2026-11-06 | |
 | 3 | Knowledge layer and AI agents: graph, claims, company maps, research queue, memory + AI search, Opus plan, summary and daily market analysis, study of big moves | ⬜ Not started | | |
-| 4 | Idea lab: self-improving loop, conviction-bet debate, stage gates | ⬜ Not started | | |
+| 4 | Idea lab: self-improving loop, conviction-bet debate, stage gates | 🟡 Loop v1 built (lab rounds twice a week + weekly engineer); conviction bets, big-moves feed not yet | 2026-11-08 | |
 | 5 | Operate 1–2+ months, review, tune | ⬜ Not started | | |
 
 **Re-plan (2026-11-07, user's direction):** the goal for the next few months is **understanding the market** and a system
@@ -275,13 +275,14 @@ daily, and limits/failures defer cleanly.
 
 ## Phase 4: Idea lab and self-improvement
 
-- [ ] `ideas`, `experiments`, `backtest_results`, `strategies` (stage + version) tables; `lab/notebook.md` generated from them
-- [ ] Opus idea generation (nightly short list, weekly round) reading the notebook
-- [ ] Sonnet writes strategies into `strategies/experimental/` only; sandboxed runs; `core/` and `config/limits.yaml` protected
-- [ ] Automated stage gates (backtest → validation → paper → promote/retire), holdout usage logged, multiple-testing penalty
+- [x] `ideas`, `lab_rounds`, `strategy_moves`, `engineer_runs` tables (migration 014); `lab/notebook.md` appended each round and each trade review
+- [x] Opus idea generation, twice a week (Sun 12:00, Wed 23:00 ET), reading the notebook, all results, research notes and the feature catalog
+- [x] Sonnet writes strategies into `lab/candidates/` only; static sandbox validator + runtime look-ahead check; AI code runs in its own process until it passes; `core/` and `config/` protected
+- [x] Automated stage decisions (fixed rules, architecture §9.1): reject / admit live / validate → `paper/` / retire; multiple-testing penalty; holdout never used automatically
 - [ ] **Conviction bets:** Opus proposer → Sonnet skeptic (bear-side data) → **user approval** → tracked as its own record;
       allowance grows or shrinks with results
-- [ ] Performance-decay monitor; retirement
+- [x] Performance-decay monitor; retirement (decay rule + cap of 16 live strategies)
+- [x] **Weekly engineer** (Claude Code on a git branch) builds feature requests and fixes; fixed checks; **merge only after the user's OK**
 - [ ] Study of big moves feeds idea proposals automatically; daily "matches a winner profile" watch list, outcomes recorded
 - [ ] Weekly picks, monthly scorecard, Idea lab dashboard page with calibration charts
 
@@ -340,3 +341,4 @@ daily, and limits/failures defer cleanly.
 | 2026-11-07 | Trade journal for learning (migration 013): entry/exit context (features, regime, reason, news), MFE/MAE updated nightly, SPY at entry/exit; weekly Opus trade review (Saturdays 10:00 ET) → `trade_reviews`, reports/weekly/, lessons appended to `lab/notebook.md`; Trading page shows best/worst and context. Paper mode: planned after Mon–Wed dry run, switched on when the user says so. |
 | 2026-11-07 | Pre-Monday check found: (1) features rebuild crashing on an SEC filing with a typo'd year (0202-02-01, CIK 926423) → unreadable or pre-1990 dates are dropped (test added); (2) SEC 503s burning retries in insider.recent → 502/503/504 now pause the source for 15 min without counting an attempt. Both tasks reset; rebuild verified writing fundamentals. 47 tests. |
 | 2026-11-08 | Removed the daily AI caps (user decision): the Max plan's 5-hour/weekly limits are the only limit; a hit pauses that model's queue until it resets. Usage still logged in `ai_usage`. |
+| 2026-11-08 | **Self-improving loop v1** (user: "enable recursive self improvement"). Level 1, strategy lab (`core/jobs/lab.py`, `lab.cycle` Sun 12:00 + Wed 23:00 ET): Opus proposes → Sonnet builds → sandbox validator (`core/lab/sandbox.py`) → smoke + train test in a separate process (`core/lab/auto.py`, ~3 min, ~8 GB peak) incl. look-ahead check (`core/lab/lookahead.py`) → fixed rules admit/retire → Opus report → notebook + feature requests. Level 2, engineer (`core/lab/engineer.py`, Sat 12:30 ET): Claude Code in a worktree outside the repo, protected paths, checks, **no automatic merge** (the auto-merge version was blocked by a safety check; decided to require the user's OK). Planner isolates failing strategies. Read-only DB role `tradebot_ro` (migration 015). Daily AI caps removed and no minimum position size (user). 59 tests. |

@@ -153,23 +153,35 @@ class RandomTwin(FeatureStrategy):
         return self.inner.exits(t, m, held)
 
 
+def load_file(path: Path, stage: str = "experimental") -> list[type]:
+    """Import one strategy file and return its FeatureStrategy subclasses (each instance gets `.stage`)."""
+    spec = importlib.util.spec_from_file_location(f"strategies.{stage}.{path.stem}", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return [obj for obj in vars(mod).values()
+            if isinstance(obj, type) and issubclass(obj, FeatureStrategy) and obj not in (FeatureStrategy, RandomTwin)
+            and obj.__module__ == mod.__name__]
+
+
 def load(stage: str | None = None) -> list[FeatureStrategy]:
-    """Import every strategy file under strategies/<stage>/ (all non-retired stages if None)."""
+    """Import every strategy file under strategies/<stage>/ (all non-retired stages if None). A file that fails to
+    import is skipped and reported, so one broken strategy never stops the planner."""
+    from core.log import event
     out = []
     stages = [stage] if stage else [s for s in STAGES if s != "retired"]
     for st in stages:
         for path in sorted((ROOT / "strategies" / st).glob("*.py")):
             if path.name.startswith("_"):
                 continue
-            spec = importlib.util.spec_from_file_location(f"strategies.{st}.{path.stem}", path)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            for obj in vars(mod).values():
-                if isinstance(obj, type) and issubclass(obj, FeatureStrategy) and obj not in (FeatureStrategy, RandomTwin) \
-                        and obj.__module__ == mod.__name__:
-                    inst = obj()
-                    inst.stage = st
-                    out.append(inst)
+            try:
+                classes = load_file(path, st)
+            except Exception as e:                       # noqa: BLE001
+                event("strategy", f"could not load {st}/{path.name}: {e}", level="error")
+                continue
+            for obj in classes:
+                inst = obj()
+                inst.stage = st
+                out.append(inst)
     return out
 
 

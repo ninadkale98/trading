@@ -317,9 +317,36 @@ const views = {
         <td>${m.passed ? badge("passed", "good") : badge("not yet", "mute")}</td></tr>`;
     });
     const reps = d.reports.map((r) => `<a class="btn" href="#lab/${encodeURIComponent(r)}">${esc(r.replace(".md", ""))}</a>`).join(" ");
+    const L = d.loop || {};
+    const stageBadge = { live: "good", promoted: "good", rejected: "mute", retired: "mute", build_failed: "bad", tested: "warn", built: "warn", proposed: "warn" };
+    const ideas = (L.ideas || []).map((i) => {
+      const s60 = (i.signal_study || []).find((r) => r.horizon_days === 60) || {};
+      return `<tr><td><b>${esc(i.name)}</b><div class="small muted">round ${esc(i.round_id)} · ${esc(i.kind)}${i.parent ? " of " + esc(i.parent) : ""}</div></td>
+        <td class="small">${esc(i.title)}<div class="muted">${esc((i.hypothesis || "").slice(0, 220))}</div></td>
+        <td class="num ${cls(s60.vs_pool)}">${s60.vs_pool == null ? "—" : pct(s60.vs_pool * 100)}<div class="small muted">${s60.t_vs_pool_adj == null ? "" : "t_adj " + num(s60.t_vs_pool_adj, 2)}</div></td>
+        <td>${badge(i.status, stageBadge[i.status] || "mute")}<div class="small muted">${esc((i.verdict || "").slice(0, 160))}</div></td></tr>`;
+    });
+    const moves = (L.moves || []).map((m) => `<tr><td class="small">${esc(new Date(m.ts).toLocaleDateString())}</td><td><b>${esc(m.strategy)}</b></td>
+      <td class="small">${esc(m.from_stage || "")} → <b>${esc(m.to_stage)}</b></td><td class="small">${esc(m.reason)}</td></tr>`);
+    const eng = (L.engineer || []).map((e) => `<tr><td><b>#${esc(e.id)}</b><div class="small muted">${esc(new Date(e.started_at).toLocaleDateString())}</div></td>
+      <td>${badge(e.status, { merged: "good", ready: "warn", needs_review: "bad", running: "warn" }[e.status] || "mute")}</td>
+      <td class="small">${esc(e.goal || "")}<div class="muted">${esc(e.branch)} · ${(e.files || []).length} files</div></td></tr>`);
+    const rounds = (L.rounds || []).map((r) => `<details><summary><b>Round ${esc(r.id)}</b> · ${esc(new Date(r.started_at).toLocaleString())} · ${r.finished_at ? "done" : "running"}</summary>
+      ${r.proposal_md ? `<h3>Why these ideas (Opus)</h3>${md(r.proposal_md)}` : ""}${r.report_md ? `<h3>What we found</h3>${md(r.report_md)}` : ""}</details>`).join("");
+    const live = (d.stages.experimental || []).length + (d.stages.paper || []).length + (d.stages.promoted || []).length;
     return `<h1>Idea lab</h1><p class="sub">Every strategy is tested on 2016–2022 against SPY and against a random twin
       (same number of picks, random stocks, same exits). ${num(d.total_backtests)} backtests run so far: the more we try,
       the higher the bar for "significant".</p>
+      <div class="kpis"><div class="kpi"><div class="label">Live strategies</div><div class="value">${live}</div><div class="note">trading in dry run / paper</div></div>
+        <div class="kpi"><div class="label">Ideas tried</div><div class="value">${(L.ideas || []).length}</div><div class="note">by the self-improving loop</div></div>
+        <div class="kpi"><div class="label">Retired</div><div class="value">${(d.stages.retired || []).length}</div><div class="note">kept so they aren't retried blindly</div></div></div>
+      <div class="card"><h2>Self-improving loop: ideas</h2><p class="small muted">Twice a week Opus proposes ideas, Sonnet writes them as code, fixed checks test them
+        (safety, look-ahead, 2016–2022), and fixed rules admit the ones with a sign of life to live trading. Column: 60-day return vs the average eligible stock.</p>
+        ${table(["Idea", "What it tests", "#60d vs pool", "Status"], ideas, "No AI ideas yet. The first round runs Sunday noon ET.")}</div>
+      <div class="card"><h2>Rounds</h2>${rounds || '<p class="muted">No rounds yet.</p>'}</div>
+      <div class="card"><h2>Strategy moves</h2>${table(["When", "Strategy", "Move", "Why"], moves, "No moves yet.")}</div>
+      <div class="card"><h2>Engineer (system improvements, need your OK)</h2><p class="small muted">Weekly, Claude Code builds one improvement on its own branch. Nothing merges without review:
+        say "merge engineer #N" or "reject engineer #N" in chat.</p>${table(["Run", "Status", "What"], eng, "No engineer runs yet. First one: Saturday 12:30 ET.")}</div>
       <div class="card"><h2>Latest result per strategy</h2>${table(["Strategy", "#Trades", "#Win rate", "#Excess vs SPY per trade", "#vs random twin", "#With SPY sleeve", "Gates", ""], rows, "No backtests yet.")}
         <p class="small muted">Gates: enough trades · beats SPY per trade (multiple-testing bar) · beats the random twin · works in most years.</p></div>
       <div class="card md"><div class="row">${reps}</div>${d.report ? md(d.report) : ""}</div>`;

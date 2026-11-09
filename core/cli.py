@@ -51,7 +51,32 @@ def main(argv: list[str] | None = None) -> int:
     ap_ = sub.add_parser("approve"); ap_.add_argument("id", type=int); ap_.add_argument("--size", type=float, default=1.0)
     ap_.add_argument("--comment")
     rj = sub.add_parser("reject"); rj.add_argument("id", type=int); rj.add_argument("--comment")
+    sub.add_parser("lab")
+    sub.add_parser("engineer")
+    em = sub.add_parser("engineer-merge"); em.add_argument("id", type=int)
+    er = sub.add_parser("engineer-reject"); er.add_argument("id", type=int); er.add_argument("--reason", default="")
     a = p.parse_args(argv)
+
+    if a.cmd in ("lab", "engineer", "engineer-merge", "engineer-reject"):
+        from core.db import query as q
+        if a.cmd == "lab":
+            from core.jobs.lab import strategy_files
+            files = strategy_files()
+            for st in ("promoted", "paper", "experimental"):
+                names = sorted(n for n, (s, _) in files.items() if s == st)
+                print(f"{st:<12} {len(names):>2}: {', '.join(names) or '—'}")
+            print(f"{'retired':<12} {sum(1 for s, _ in files.values() if s == 'retired'):>2}")
+            for r in q("SELECT id, started_at, finished_at, summary FROM lab_rounds ORDER BY id DESC LIMIT 5"):
+                s = r["summary"] or {}
+                print(f"round {r['id']} {r['started_at']:%m-%d %H:%M} {'done' if r['finished_at'] else 'running'}: "
+                      f"admitted {s.get('admitted', [])} rejected {s.get('rejected', [])} failed {s.get('build_failed', [])}")
+        elif a.cmd == "engineer":
+            for r in q("SELECT id, started_at, status, branch, goal FROM engineer_runs ORDER BY id DESC LIMIT 10"):
+                print(f"#{r['id']} {r['started_at']:%m-%d} {r['status']:<12} {r['branch']}  {(r['goal'] or '')[:90]}")
+        else:
+            from core.lab import engineer
+            print(engineer.merge(a.id) if a.cmd == "engineer-merge" else engineer.reject(a.id, a.reason))
+        return 0
 
     if a.cmd in ("approvals", "approve", "reject"):
         from core.planner import approvals
