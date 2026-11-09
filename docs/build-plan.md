@@ -243,7 +243,9 @@ with zero crashes and every failure visible on the Health page.
 - [ ] Move classification: market / sector / neighbor / company-specific
 
 ### 3.5 Opus daily agents
-- [ ] 6:00 am morning plan (may trim/cancel only); 9:00 pm summary + new ideas; briefing v2 written with Opus input
+- [ ] 6:00 am morning plan (may trim/cancel only; **rule-based part done 2026-11-09:** 9:20 am pre-open news check
+      cancels buys with major bad news since the plan, and the 6:30 am briefing lists overnight/weekend major news
+      by company size); 9:00 pm summary + new ideas; briefing v2 written with Opus input
 
 ### 3.6 Similar past situations
 - [ ] pgvector numeric fingerprints (feature vectors, no language model); "this looks like…" lookups in research and briefings
@@ -318,7 +320,7 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
 - [ ] **News tone for history without look-ahead:** finance word list (Loughran–McDonald style) over 2019+ headlines
       → backtestable news features; Haiku labels on old headlines are marked "may carry hindsight" (forward tests decide)
 - [ ] **How professionals do it:** research pass (estimate revisions, guidance, call tone, peer data, alternative
-      data) → learning/16 + seed ideas for the lab
+      data) → learning/17 + seed ideas for the lab
 - [ ] Earnings-surprise history keeps filling free (Alpha Vantage 25/day + Finnhub); paid data only after a proven,
       profitable strategy, funded from its profit (user, 2026-11-08)
 
@@ -382,3 +384,4 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
 | 2026-11-08 | **Self-improving loop v1** (user: "enable recursive self improvement"). Level 1, strategy lab (`core/jobs/lab.py`, `lab.cycle` Sun 12:00 + Wed 23:00 ET): Opus proposes → Sonnet builds → sandbox validator (`core/lab/sandbox.py`) → smoke + train test in a separate process (`core/lab/auto.py`, ~3 min, ~8 GB peak) incl. look-ahead check (`core/lab/lookahead.py`) → fixed rules admit/retire → Opus report → notebook + feature requests. Level 2, engineer (`core/lab/engineer.py`, Sat 12:30 ET): Claude Code in a worktree outside the repo, protected paths, checks, **no automatic merge** (the auto-merge version was blocked by a safety check; decided to require the user's OK). Planner isolates failing strategies. Read-only DB role `tradebot_ro` (migration 015). Daily AI caps removed and no minimum position size (user). 59 tests. |
 | 2026-11-08 | **Lab round 1** (28 min): 4 Opus ideas → `surprise_near_high` live, 3 rejected; Opus's report found 4 flaws in the lab's own measurements → fixed (top-decile basis, Hansen–Hodrick overlap t, leave-best-year-out, ≥ 4 years gate, distinct-version test count) + `lab.baseline` re-test. With honest t: surprise_near_high 2.59 (50 signals), insider_cluster 2.39, relative_strength 2.23, earnings_gap_up 1.53; accumulation / quality_pullback / return_to_average ≈ 0 (kept live for comparison; first to go under the cap). Proposer now max 1 price-only idea per round. Haiku backlog now covers all 2019+ headlines. 61 tests. |
 | 2026-11-08 | **Earnings release reader** (4.1). EDGAR's live 8-K feed (every 20 min) finds item 2.02 releases minutes after filing instead of at the ~10 pm daily index; Haiku reads the masked exhibit 99.1 (names, ticker, executives, links, years hidden) → guidance / tone / numbers → `earnings_reads` + 3 features (reaction-day point-in-time, replaced at the next release). Haiku vs Sonnet on 6 releases: same guidance and tone in 6/6, same numbers, Sonnet found 1 extra adjusted EPS, cost $0.004 vs $0.056 → Haiku for everything. Masking isn't perfect (a former company name survived inside a segment name), so history reads are marked `history`. Estimates only from 2026-11-07 → `rev_surprise` forward only. History backfill started (~40/hour, random order). 67 tests. |
+| 2026-11-09 | **Pre-open news check + weekend news in the briefing** (user: Nvidia fell 4% on Sunday-evening CEO news; why didn't we catch it?). Haiku had labeled it 17 min after it broke (9 negative items by Monday 5:40 am), but (a) nothing showed it: the 6:30 am refresh only listed news from around Friday, (b) no strategy or check used it. The move was entirely in the gap (Fri close 186.7 → first pre-market trade 178.7, flat afterwards), so there was nothing to catch by reading faster. Fixed: briefing major news now runs to the present, one line per stock, biggest companies first; `trading.open` cancels planned buys with importance ≥ 4 bad news since the plan. Also fixed: Alpha Vantage rate-limit notes no longer count as 'premium-only'. learning/16. 67 tests. |

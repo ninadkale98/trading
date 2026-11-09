@@ -33,11 +33,14 @@ def plan(ctx: TaskContext) -> dict:
 def open_(ctx: TaskContext) -> dict:
     expired = ex.expire_approvals()
     today = datetime.now(ET).date()
+    nc = ex.news_check(today)          # major bad news since the plan → that buy is skipped
+    note = (f"; skipped for bad news: {', '.join(nc['news_skipped'])}" if nc["news_skipped"] else "") + \
+           (f"; held with bad news: {', '.join(nc['news_flagged'])}" if nc["news_flagged"] else "")
     if ex.mode() != "paper":
-        return {"summary": f"dry run: no orders sent ({expired} approvals expired)", "expired": expired}
+        return {"summary": f"dry run: no orders sent ({expired} approvals expired){note}", "expired": expired, **nc}
     r = ex.submit_paper(today)
     return {"summary": f"paper orders sent: {r['sent']}" + (f"; {len(r['errors'])} failed" if r["errors"] else "")
-                       + f"; {expired} approvals expired", **r}
+                       + f"; {expired} approvals expired{note}", **r, **nc}
 
 
 @task("trading.sync", priority=85, description="Paper account: record fills, closes and raise trailing stops")

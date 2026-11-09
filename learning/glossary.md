@@ -53,7 +53,7 @@ The number in brackets is the file with the full explanation.
 | **Forward P/E** | Price ÷ *expected* next-12-month EPS [3] |
 | **Free cash flow** | Cash generated minus capex [1] |
 | **GAAP** | Official US accounting rules [1] |
-| **Gap** | Stock opens far from the previous close, leaving a hole on the chart [4] |
+| **Gap** | Stock opens far from the previous close, leaving a hole on the chart. News that comes out while the market is closed is usually all "used up" in the gap [4, 16] |
 | **Git branch** | A separate copy of the code's history where changes are made without touching the running version [14] |
 | **Gross margin** | Gross profit ÷ revenue: cents kept per $1 after making the product [1] |
 | **Gross profit** | Revenue − cost of making the product [1] |
@@ -78,12 +78,14 @@ The number in brackets is the file with the full explanation.
 | **OHLC** | Open, High, Low, Close [4] |
 | **Operating income / margin** | Profit from the core business / as a % of revenue [1] |
 | **Overbought / Oversold** | RSI above 70 / below 30 [5] |
+| **Overnight trading** | Trading between the evening and the 4 am pre-market on special venues; thin, and prices often already adjust there [16] |
 | **P/B** | Price ÷ book value [3] |
 | **P/E** | Price ÷ last-12-month EPS: dollars paid per $1 of yearly profit [3] |
 | **PEG** | P/E ÷ growth rate [3] |
 | **Position sizing** | Deciding how much to buy so one loss stays small [7] |
 | **Post-earnings drift** | Prices keep moving in the direction of an earnings surprise for weeks afterwards [12, 15] |
 | **Pre-market** | Trading from 4–9:30 am ET [4] |
+| **Pre-open news check** | Our 9:20 am rule: a planned buy that got major bad news after the plan was made is skipped [16] |
 | **Press release** | The company's own announcement; for earnings, the first full statement of the quarter [15] |
 | **Price target** | Analyst's expected price in about 12 months [6] |
 | **Priced in** | The market already expects it, so the news doesn't move the price much [10] |
@@ -107,6 +109,7 @@ The number in brackets is the file with the full explanation.
 | **Self-improving loop** | Propose → test → keep what works → learn → propose better; each turn uses the last one's lessons [14] |
 | **Settlement (T+1)** | Sale cash becomes usable 1 business day later [7] |
 | **Shares outstanding** | All shares that exist [3] |
+| **Short selling** | Borrowing shares and selling them, hoping to buy back cheaper later; profits when the price falls. Our system doesn't short [16] |
 | **SIC code** | The SEC's industry code for a company, mapped to our 11 sectors [9] |
 | **Signal study** | Do the stocks a rule picks beat the average stock over the next weeks? No stops or exits involved [14] |
 | **Split** | One share becomes several smaller shares; not a real gain or loss [9] |

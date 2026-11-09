@@ -28,10 +28,15 @@ def build(day=None) -> tuple[str, str]:
     news_n = query("SELECT count(*) n FROM news_ai WHERE processed_at::date = %s::date", (day,))[0]["n"]
     scored = query("SELECT * FROM predictions WHERE resolved_on=%s", (day,))
     open_pred = query("SELECT count(*) n FROM predictions WHERE status='open'")[0]["n"]
-    major = query("""SELECT e.symbol, e.direction, e.importance, n.headline FROM news_events e JOIN news n ON n.id=e.news_id
-                     JOIN news_ai a ON a.news_id=e.news_id WHERE e.created_at >= %s::date - 1 AND e.created_at < %s::date + 1
-                       AND e.importance >= 4 AND NOT coalesce(a.recap,false) ORDER BY e.importance DESC, e.created_at DESC LIMIT 6""",
-                  (day, day))
+    major = query("""SELECT * FROM (
+                       SELECT DISTINCT ON (e.symbol) e.symbol, e.direction, e.importance, n.headline, coalesce(f.market_cap, 0) cap
+                       FROM news_events e JOIN news n ON n.id=e.news_id JOIN news_ai a ON a.news_id=e.news_id
+                       LEFT JOIN features_daily f ON f.symbol=e.symbol AND f.date=%s
+                       WHERE n.created_at >= %s::date - 1
+                         AND n.created_at < greatest(%s::date + 1, now())     -- morning refresh: overnight + weekend news too
+                         AND e.importance >= 4 AND NOT coalesce(a.recap,false)
+                       ORDER BY e.symbol, e.importance DESC, n.created_at DESC) x
+                     ORDER BY cap DESC, importance DESC LIMIT 8""", (day, day, day))   # one line per stock, biggest first
     reads = query("""SELECT r.symbol, r.guidance, r.tone, r.eps_surprise, r.rev_surprise, r.guidance_detail
                      FROM earnings_reads r LEFT JOIN features_daily f ON f.symbol=r.symbol AND f.date=%s
                      WHERE r.status='ok' AND r.mode='live' AND r.filed_at BETWEEN %s AND %s::date + 1

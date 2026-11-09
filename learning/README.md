@@ -23,6 +23,7 @@ earnings drop and our "Quality Uptrend Pullback" scan.
 | 13 | [13-how-our-daily-loop-works.md](13-how-our-daily-loop-works.md) | What runs when, dry run vs paper, how trades are sized, approvals, predictions. |
 | 14 | [14-how-the-system-improves-itself.md](14-how-the-system-improves-itself.md) | The self-improving loop: Opus proposes ideas, fixed checks test them, the best go live; the weekly engineer adds missing data. |
 | 15 | [15-reading-earnings-releases.md](15-reading-earnings-releases.md) | How the system reads every earnings press release minutes after it's filed: guidance, tone, surprise, and why names are hidden. |
+| 16 | [16-news-gaps-and-what-we-can-trade.md](16-news-gaps-and-what-we-can-trade.md) | The Nvidia weekend case: why knowing the news fast didn't mean we could trade it (the gap), and what news *is* good for: the pre-open check, the briefing, drift studies. |
 | — | [glossary.md](glossary.md) | Every term, one line each, A–Z. Use it as a quick lookup. |
 
 ## The one-paragraph version

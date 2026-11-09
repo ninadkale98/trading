@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import date
 
 from core.config import settings
-from core.db import conn, query
+from core.db import conn, execute, query
 from core.ingest import alpaca
 from core.execution.journal import entry_context, exit_context, update_excursions
 from core.log import event
@@ -187,3 +187,36 @@ def expire_approvals() -> int:
 def mode() -> str:
     return settings().get("trading", {}).get("mode", "dry_run")
 
+
+
+# ── before the open: major bad news since the plan was made ─────────────────────────────────────────────────────
+# The evening plan only sees news up to that day's 4 pm close. If Haiku later labels a major negative item for a stock
+# we planned to buy (importance >= 4, e.g. a CEO scandal or fraud probe), we don't buy into it blind: the plan is
+# cancelled with the headline as the reason (kept in trade_plans, so the lab can compare skipped vs taken later).
+# Open positions with such news are only reported; their stops and exit rules stay in charge.
+NEWS_VETO_IMPORTANCE = 4
+
+_BAD_NEWS = """SELECT n.headline, e.importance FROM news_events e JOIN news n ON n.id=e.news_id
+               JOIN news_ai a ON a.news_id=e.news_id
+               WHERE e.symbol=%s AND e.direction < 0 AND e.importance >= %s AND NOT coalesce(a.recap, false)
+                 AND n.created_at >= (%s::date + time '16:00') AT TIME ZONE 'America/New_York'
+               ORDER BY e.importance DESC, n.created_at DESC LIMIT 1"""
+
+
+def news_check(today: date) -> dict:
+    md, skipped, flagged = mode(), [], []
+    for p in query("""SELECT id, symbol, signal_date FROM trade_plans WHERE trade_date=%s AND mode=%s AND side='buy'
+                      AND status IN ('planned', 'waiting_approval')""", (today, md)):
+        bad = query(_BAD_NEWS, (p["symbol"], NEWS_VETO_IMPORTANCE, p["signal_date"]))
+        if bad:
+            execute("UPDATE trade_plans SET status='cancelled', error=%s, updated_at=now() WHERE id=%s",
+                  (f"skipped: major bad news before the open: {bad[0]['headline'][:200]}", p["id"]))
+            skipped.append(p["symbol"])
+    for b in query("SELECT symbol, entry_date FROM positions_book WHERE mode=%s AND status='open'", (md,)):
+        last = query("SELECT max(date) d FROM daily_prices WHERE symbol='SPY' AND date < %s", (today,))[0]["d"] or b["entry_date"]
+        if query(_BAD_NEWS, (b["symbol"], NEWS_VETO_IMPORTANCE, last)):
+            flagged.append(b["symbol"])
+    if skipped or flagged:
+        event("execution", f"news check: skipped buys {skipped}; held with major bad news {flagged}",
+              {"skipped": skipped, "flagged": flagged}, level="warning" if skipped else "info")
+    return {"news_skipped": skipped, "news_flagged": flagged}

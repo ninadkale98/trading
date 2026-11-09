@@ -618,6 +618,11 @@ The system handles routine, rule-following work alone and **escalates anything u
 - **Alpaca paper account** ($100,000 practice balance, kept as is), fully automatic, inside the risk rules.
 - Orders: limit entries as **bracket orders** (entry + stop-loss + take-profit together); trailing stops for runners.
 - Paper fills are optimistic, so the journal subtracts an estimated cost for slippage and spread.
+- **Pre-open news check** (9:20 am, `execution.run.news_check`, both modes): a planned buy whose stock got a major
+  negative news label (Haiku importance ≥ 4, not a price recap) after the plan's 4 pm cutoff is cancelled, with the
+  headline as the reason (kept in `trade_plans` for skipped-vs-taken comparisons). Open positions with such news are
+  only reported; stops and exit rules stay in charge. Rule-based first step of the Opus morning plan (§13). Added
+  after the Nvidia weekend gap of 2026-11-09 (learning/16).
 - **Real money (Robinhood MCP account): never automatic.** The system can recommend; each order needs the
   user's explicit approval in chat.
 
