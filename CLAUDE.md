@@ -24,7 +24,7 @@ add new concepts to `learning/` (keep `learning/glossary.md` in sync).
   and **never merges by itself**: when the user says "merge engineer #N" run `.venv/bin/tradebot engineer-merge N`
   (review the diff first and tell the user what it does); "reject engineer #N" → `tradebot engineer-reject N`.
   Status: `tradebot lab`, `tradebot engineer`.
-- Daily: news read by Haiku every 30 min; 4:40 pm prices → features → snapshot → settle session → plan; 9 pm Opus
+- Daily: news read by Haiku every 30 min; earnings press releases found on EDGAR every 20 min and read by Haiku (`tradebot earnings`, arch §7.1); 4:40 pm prices → features → snapshot → settle session → plan; 9 pm Opus
   market analysis (reports/market/); 9:30 pm briefing (reports/daily/).
 
 ## Alpaca (paper trading + market data)

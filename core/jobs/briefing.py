@@ -32,6 +32,10 @@ def build(day=None) -> tuple[str, str]:
                      JOIN news_ai a ON a.news_id=e.news_id WHERE e.created_at >= %s::date - 1 AND e.created_at < %s::date + 1
                        AND e.importance >= 4 AND NOT coalesce(a.recap,false) ORDER BY e.importance DESC, e.created_at DESC LIMIT 6""",
                   (day, day))
+    reads = query("""SELECT r.symbol, r.guidance, r.tone, r.eps_surprise, r.rev_surprise, r.guidance_detail
+                     FROM earnings_reads r LEFT JOIN features_daily f ON f.symbol=r.symbol AND f.date=%s
+                     WHERE r.status='ok' AND r.mode='live' AND r.filed_at BETWEEN %s AND %s::date + 1
+                     ORDER BY coalesce(f.market_cap, 0) DESC""", (day, day, day))
     earn = query("""SELECT u.symbol, u.report_date, u.time_of_day FROM upcoming_earnings u
                     JOIN features_daily f ON f.symbol=u.symbol AND f.date=%s
                     WHERE u.report_date <= %s::date + 3 AND coalesce(f.market_cap, 0) >= 20e9 ORDER BY u.report_date LIMIT 12""",
@@ -58,6 +62,15 @@ def build(day=None) -> tuple[str, str]:
     if j:
         L += [f"> {j[0]['summary']}", "", "Full write-up: the Market analysis (reports/market).", ""]
     L += [f"- **{m['symbol']}** ({'+' if m['direction'] > 0 else ''}{m['direction']}, importance {m['importance']}): {m['headline'][:150]}" for m in major]
+    if reads:
+        g = {k: [r for r in reads if r["guidance"] == k] for k in ("raised", "lowered", "withdrawn")}
+        L += ["", f"**Earnings releases read** (Haiku, names hidden): {len(reads)}; guidance raised {len(g['raised'])}, "
+                  f"lowered {len(g['lowered'])}, withdrawn {len(g['withdrawn'])}."
+              + (" Largest companies with a change:" if any(g.values()) else "")]
+        for r in (g["raised"] + g["lowered"] + g["withdrawn"])[:8]:
+            sur = ", ".join(f"{k.split('_')[0]} surprise {r[k]:+.1%}" for k in ("eps_surprise", "rev_surprise") if r[k] is not None)
+            L += [f"- **{r['symbol']}** guidance {r['guidance']}, tone {r['tone']:+d}{'; ' + sur if sur else ''}: "
+                  f"{(r['guidance_detail'] or '')[:160]}"]
     L += ["", "## 4. Portfolio" + (" (simulated)" if md_ == "dry_run" else ""),
           "| Stock | Strategy | Since | Entry | Last | P&L | Stop |", "|---|---|---|---|---|---|---|"]
     L += [f"| {b['symbol']} | {b['strategy']} | {b['entry_date']} | {b['entry_price']:.2f} | {(b['last'] or 0):.2f} | "

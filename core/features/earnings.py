@@ -31,15 +31,19 @@ def reaction_days(dates: pd.DatetimeIndex, symbols: list[str]) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=["symbol", "t"])
     df = pd.DataFrame(rows)
-    local = pd.to_datetime(df["accepted_at"], utc=True).dt.tz_convert(ET)
-    day = local.dt.tz_localize(None).dt.normalize()
-    same_day = df["timing"].eq("before_open")
-    # first trading day >= release day (before the open) or > release day (during / after the session)
-    pos_same = dates.searchsorted(day, side="left")
-    pos_next = dates.searchsorted(day, side="right")
-    df["t"] = np.where(same_day, pos_same, pos_next)
+    df["t"] = reaction_index(dates, df["accepted_at"], df["timing"])
     df = df[df["t"] < len(dates)]
     return df.drop_duplicates(["symbol", "t"])[["symbol", "t"]]
+
+
+def reaction_index(dates: pd.DatetimeIndex, accepted_at: pd.Series, timing: pd.Series) -> np.ndarray:
+    """Index into `dates` of each release's reaction day: the first trading day >= the release day for a release
+    before the open, else the first trading day after it. len(dates) = not yet inside the range."""
+    local = pd.to_datetime(accepted_at, utc=True).dt.tz_convert(ET)
+    day = local.dt.tz_localize(None).dt.normalize()
+    pos_same = dates.searchsorted(day, side="left")
+    pos_next = dates.searchsorted(day, side="right")
+    return np.where(timing.eq("before_open").to_numpy(), pos_same, pos_next)
 
 
 def calendar_days_to_next(dates: pd.DatetimeIndex, symbols: list[str]) -> np.ndarray | None:

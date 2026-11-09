@@ -39,8 +39,11 @@ The number in brackets is the file with the full explanation.
 | **Downgrade / Upgrade** | Analyst lowers / raises their rating [6] |
 | **Earnings call** | Management's call with analysts after the report [2] |
 | **Earnings report** | Quarterly results: revenue, profit, guidance [2] |
+| **Earnings surprise** | Actual result minus the consensus estimate, as a fraction of the estimate [15] |
+| **EDGAR** | The SEC's free website of company filings; it has a live list of new filings [9, 15] |
 | **EMA / SMA** | Exponential / simple moving average [5] |
 | **EPS** | Earnings per share = net income ÷ shares [2] |
+| **Exhibit 99.1** | The earnings press release attached to an 8-K filing [15] |
 | **Exposure dial** | How much of the account the system keeps invested, based on market conditions [11] |
 | **Falling knife** | A stock that's crashing; risky to buy mid-fall [5] |
 | **Feature request** | Data or a number the idea lab wishes it had; the weekly engineer builds it [14] |
@@ -56,7 +59,7 @@ The number in brackets is the file with the full explanation.
 | **Gross profit** | Revenue − cost of making the product [1] |
 | **Growth / Value** | Fast-growing, often expensive companies / cheap, steady companies [10] |
 | **GTC** | Good 'til canceled: an order stays open across days [7] |
-| **Guidance** | The company's forecast for upcoming quarters [2] |
+| **Guidance** | The company's forecast for upcoming quarters; what moves prices is whether it was raised, kept or lowered [2, 15] |
 | **Hindsight bias** | After the fact, the reason always looks obvious [10] |
 | **Hypothesis** | Why an idea should work, written before testing, including what result would prove it wrong [14] |
 | **Income statement** | Report of revenue, costs and profit over a period [1] |
@@ -67,6 +70,7 @@ The number in brackets is the file with the full explanation.
 | **Margin account** | Can borrow money from the broker [7] |
 | **Market cap** | Price × shares = the value of the whole company [3] |
 | **Market order** | Buy or sell immediately at the best available price [7] |
+| **Masking** | Hiding the company name and year before Claude reads old text, so it can't use hindsight [15] |
 | **Moving average (MA)** | Average closing price over the last N days [5] |
 | **Multiple testing** | Trying many ideas makes some look good by luck, so each extra test raises the bar [14] |
 | **Net income** | Final profit after all costs [1] |
@@ -78,11 +82,14 @@ The number in brackets is the file with the full explanation.
 | **P/E** | Price ÷ last-12-month EPS: dollars paid per $1 of yearly profit [3] |
 | **PEG** | P/E ÷ growth rate [3] |
 | **Position sizing** | Deciding how much to buy so one loss stays small [7] |
+| **Post-earnings drift** | Prices keep moving in the direction of an earnings surprise for weeks afterwards [12, 15] |
 | **Pre-market** | Trading from 4–9:30 am ET [4] |
+| **Press release** | The company's own announcement; for earnings, the first full statement of the quarter [15] |
 | **Price target** | Analyst's expected price in about 12 months [6] |
 | **Priced in** | The market already expects it, so the news doesn't move the price much [10] |
 | **Pullback** | A temporary dip inside an uptrend [5] |
 | **Random twin** | Same number of picks and exits as a strategy, but random stocks: the fairness check [14] |
+| **Reaction day** | The first trading day that can react to a release: same day if before 9:30 am, else the next day [15] |
 | **Real yield** | An interest rate minus expected inflation [11] |
 | **Relative strength** | How a stock or group performs compared with SPY or its sector [10] |
 | **Relative volume (RVOL)** | Today's volume ÷ average volume [4] |

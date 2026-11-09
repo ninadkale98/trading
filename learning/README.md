@@ -22,6 +22,7 @@ earnings drop and our "Quality Uptrend Pullback" scan.
 | 12 | [12-what-research-says-about-strategies.md](12-what-research-says-about-strategies.md) | News, AI, earnings, analysts, insiders, supply chains, themes, macro: what the evidence says works. |
 | 13 | [13-how-our-daily-loop-works.md](13-how-our-daily-loop-works.md) | What runs when, dry run vs paper, how trades are sized, approvals, predictions. |
 | 14 | [14-how-the-system-improves-itself.md](14-how-the-system-improves-itself.md) | The self-improving loop: Opus proposes ideas, fixed checks test them, the best go live; the weekly engineer adds missing data. |
+| 15 | [15-reading-earnings-releases.md](15-reading-earnings-releases.md) | How the system reads every earnings press release minutes after it's filed: guidance, tone, surprise, and why names are hidden. |
 | — | [glossary.md](glossary.md) | Every term, one line each, A–Z. Use it as a quick lookup. |
 
 ## The one-paragraph version

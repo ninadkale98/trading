@@ -180,9 +180,9 @@ def enforce_cap(live: dict, protect: set[str]) -> list[str]:
 
 # ── context for Opus ─────────────────────────────────────────────────────────────────────────────────────────────
 def feature_catalog() -> str:
-    from core.features import earnings, fundamentals, news, price
+    from core.features import earnings, fundamentals, news, price, releases
     lines = []
-    for mod in (price, earnings, fundamentals, news):
+    for mod in (price, earnings, fundamentals, news, releases):
         for k, v in mod.FEATURES.items():
             lines.append(f"- `{k}`: {v}")
     return "\n".join(lines)

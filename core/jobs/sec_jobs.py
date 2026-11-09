@@ -48,7 +48,9 @@ def _store_filings(cik: int, recent: dict) -> int:
                 """INSERT INTO filings (accession, cik, form, filed_at, accepted_at, report_date, items, primary_doc)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                    ON CONFLICT (accession) DO UPDATE SET items=COALESCE(EXCLUDED.items, filings.items),
-                     accepted_at=COALESCE(EXCLUDED.accepted_at, filings.accepted_at)""", rows)
+                     accepted_at=COALESCE(EXCLUDED.accepted_at, filings.accepted_at),
+                     report_date=COALESCE(EXCLUDED.report_date, filings.report_date),
+                     primary_doc=COALESCE(EXCLUDED.primary_doc, filings.primary_doc)""", rows)   # the live feed has none
     return len(rows)
 
 

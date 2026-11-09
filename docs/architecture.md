@@ -62,6 +62,7 @@ with a "known at" timestamp.
 | Minute bars (watchlist and positions only) | Alpaca | Market hours | Kept small on purpose |
 | News | **Alpaca news** (Benzinga and others) | Every 15–30 min | Tested on QCOM: fast (2–5 min after releases), granular headlines per guidance item and CFO quote, **full earnings-call transcripts**, analyst target changes. Weaknesses: many quick headlines have no article body, market-wide stories are tagged with dozens of stocks (filter to ≤3 tags for stock-focused news), mostly one source, no sentiment score. |
 | Financial statements, official company announcements (8-K), annual and quarterly reports | **SEC EDGAR** | When filed | Free. Requires a name and email in the request header and ≤10 requests/sec. |
+| **Earnings press releases** (8-K item 2.02, exhibit 99.1) | SEC EDGAR **live 8-K feed** (`getcurrent`) | Every 20 min, 6 am–9:40 pm ET weekdays | Found minutes after filing (the daily index only appears ~10 pm). Read by Haiku → `earnings_reads` (§7.1). |
 | Insider trades (Form 4) | SEC EDGAR | When filed | Filed within about 2 business days |
 | Big funds' holdings (13F) | SEC EDGAR | Quarterly | Up to 45 days late |
 | Short interest | FINRA | Twice a month | |
@@ -336,6 +337,39 @@ insider net buying · analyst revisions · news sentiment and volume · sector a
 
 All point-in-time. Strategies read features; they never fetch data themselves.
 
+### 7.1 Earnings release reader (built 2026-11-08, build plan 4.1)
+
+The press release is the first full statement of a quarter: numbers, the **outlook (guidance)** and how management
+frames it. Professionals read it within minutes; we read every one for stocks we could trade (20-day dollar volume
+≥ $1M and price ≥ $5 at the time).
+
+```
+EDGAR live 8-K feed (every 20 min) ──item 2.02──▶ filings ──▶ earnings.read (Haiku, chained)
+   fetch filing index → exhibit 99.1 → plain text (tables one row per line, first 24k chars)
+   mask: company names (legal, short, self-defined), ticker, executives, web addresses, years → Y0 / Y−1 / Y+1
+   Haiku + JSON schema → revenue, EPS (GAAP, adjusted), guidance raised|maintained|lowered|initiated|withdrawn|mixed|none,
+                         tone −2…+2, one-offs, positives, negatives
+   surprise vs consensus = OUR calendar snapshot taken before the release (not the model's number)
+   → earnings_reads → features release_tone, guidance_change, rev_surprise (core/features/releases.py)
+```
+
+- **Point-in-time:** a release's values appear on its reaction day (before 9:30 am → that day; otherwise the next
+  trading day), the same rule as the other earnings features, and are replaced at the company's next release. This is
+  one day conservative for after-close releases: the evening read is ready for the next morning, which the earnings
+  strategies v2 item will use directly.
+- **Live vs history.** `mode='live'` = read within 3 days of filing; no hindsight is possible. `mode='history'` =
+  the slow backfill of 2016+ releases (~40 per hour, in a fixed random order, so any partial fill is a fair sample of
+  all years). Masking hides names and dates, but a model can still recognise a famous company from its numbers or
+  segment names (seen in testing: a former company name inside a segment name). So history reads are research
+  material and forward results decide.
+- **Model choice (measured):** Haiku matched Sonnet on guidance and tone in 6 of 6 test releases, with the same
+  numbers; Sonnet found one more adjusted EPS. Haiku costs ~$0.004 per release vs $0.056 (equiv.), so one model
+  reads everything (comparable features; `settings.yaml → earnings_reads.model`). Peak earnings day ≈ 500 releases
+  ≈ $2; the full history (~110k liquid releases) ≈ $450 equiv. over ~4 months.
+- **Surprise data:** estimate snapshots start 2026-11-07, so `rev_surprise` exists going forward only; past EPS
+  surprise comes from Alpha Vantage history (`eps_surprise`).
+- `tradebot earnings` lists the latest reads and coverage by year.
+
 ---
 
 ## 8. Strategies: ideas as plug-ins
@@ -593,7 +627,7 @@ The system handles routine, rule-following work alone and **escalates anything u
 
 | Model | Jobs | When |
 |---|---|---|
-| **Haiku** | Headline triage in batches of ~50 (relevant? positive or negative? which company?), extracting facts from filings, simple labeling | All day |
+| **Haiku** | Headline triage in batches of ~50 (relevant? positive or negative? which company?), **reading earnings press releases** (guidance, tone, numbers; §7.1), extracting facts from filings, simple labeling | All day |
 | **Sonnet** | Company research and company maps, reconciling claims, reading full articles and earnings-call transcripts, writing strategy code | 5:30–8 pm research queue |
 | **Opus** | **6 am morning plan**; **9 pm daily summary and new ideas**; conviction-bet proposals; weekly lab review; monthly scorecard | Daily ×2, weekly, monthly |
 | **Sonnet (skeptic role)** | Pessimistic review of every conviction bet, using bear-side data (§10.5) | When a conviction bet is proposed |
@@ -621,6 +655,7 @@ The system handles routine, rule-following work alone and **escalates anything u
 | 6:00–9:30 am | Overnight news loaded and triaged, pre-market gaps |
 | **9:15 am** | **Approval deadline** for today's trades; unanswered requests default to "no trade" |
 | 9:30 am – 4:00 pm | Every 15–30 min: news, watchlist prices, tripwires, order and stop management |
+| 6:00 am – 9:40 pm, every 20 min | EDGAR live 8-K feed → new earnings releases read by Haiku (§7.1); 10:50 pm catch-up after the daily index; hourly: history reads in spare capacity |
 | 4:30 pm | Daily bars for all stocks → features → **market snapshot** (breadth, rotation, cross-asset) → strategies → planner → tomorrow's plan |
 | 5:30–8:00 pm | **Sonnet research queue**, knowledge-map updates |
 | **9:00 pm** | **Opus daily summary, daily market analysis and new ideas** → market journal, reports, predictions log, lab queue |

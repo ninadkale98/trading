@@ -15,6 +15,7 @@
   tradebot approve ID [--size 0.5] [--comment ...]    approve (optionally smaller)
   tradebot reject ID [--comment ...]   reject (safe default)
   tradebot plan                        show tomorrow's trade plan
+  tradebot earnings [-n N]             latest earnings-release reads (guidance, tone, surprise) + coverage by year
 """
 from __future__ import annotations
 
@@ -52,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     ap_.add_argument("--comment")
     rj = sub.add_parser("reject"); rj.add_argument("id", type=int); rj.add_argument("--comment")
     sub.add_parser("lab")
+    ea = sub.add_parser("earnings"); ea.add_argument("-n", type=int, default=20)
     sub.add_parser("engineer")
     em = sub.add_parser("engineer-merge"); em.add_argument("id", type=int)
     er = sub.add_parser("engineer-reject"); er.add_argument("id", type=int); er.add_argument("--reason", default="")
@@ -90,6 +92,17 @@ def main(argv: list[str] | None = None) -> int:
             print(approvals.decide(a.id, True, a.size, a.comment))
         else:
             print(approvals.decide(a.id, False, comment=a.comment))
+        return 0
+    if a.cmd == "earnings":
+        from core.db import query as q
+        for r in reversed(q("""SELECT symbol, filed_at, mode, status, guidance, tone, eps_surprise, rev_surprise, guidance_detail
+                               FROM earnings_reads WHERE mode = 'live' ORDER BY accepted_at DESC NULLS LAST LIMIT %s""", (a.n,))):
+            sur = " ".join(f"{k} {r[k]:+.1%}" for k in ("eps_surprise", "rev_surprise") if r[k] is not None)
+            print(f"{r['filed_at']} {r['symbol']:<6} {r['status']:<11} guidance {r['guidance'] or '—':<10} tone "
+                  f"{r['tone'] if r['tone'] is not None else '—':>2}  {sur:<34} {(r['guidance_detail'] or '')[:70]}")
+        cov = q("""SELECT extract(year FROM filed_at)::int y, count(*) n, count(*) FILTER (WHERE status='ok') ok
+                   FROM earnings_reads GROUP BY 1 ORDER BY 1""")
+        print("coverage:", ", ".join(f"{c['y']}: {c['ok']}/{c['n']}" for c in cov) or "none yet")
         return 0
     if a.cmd == "plan":
         from core.db import query as q

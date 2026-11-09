@@ -40,6 +40,13 @@ SCHEDULES: list[dict] = [
      "priority": 62, "resource": "claude:haiku", "expires_minutes": 25},
     {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # ALL older news (2019+), newest first,
      "payload": {"days": 3000, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},  # ~3 weeks
+    # ── Earnings release reader (build plan 4.1): live 8-K feed → Haiku reads the press release ──
+    {"name": "sec_earnings_poll", "task_type": "sec.earnings_poll", "cron": f"*/20 6-21 * * {WEEKDAYS}",   # chains earnings.read
+     "priority": 64, "resource": "sec", "expires_minutes": 18},
+    {"name": "earnings_read_catchup", "task_type": "earnings.read", "cron": f"50 22 * * {WEEKDAYS}",   # after sec.daily
+     "priority": 63, "resource": "claude:haiku", "expires_minutes": 600},
+    {"name": "earnings_read_history", "task_type": "earnings.read_history", "cron": "20 * * * *",   # ~40/hour, random order
+     "payload": {"max_items": 40}, "priority": 18, "resource": "claude:haiku", "expires_minutes": 55},
     # ── Re-plan step B: daily market analysis + predictions ──
     {"name": "predictions_score", "task_type": "predictions.score", "cron": f"45 17 * * {WEEKDAYS}",
      "priority": 56, "expires_minutes": 600},
