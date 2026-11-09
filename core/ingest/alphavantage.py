@@ -47,7 +47,8 @@ def _call(**params) -> httpx.Response:
             (RESOURCE, datetime.now(ET).date()))
     head = r.text[:400]
     if '"Information"' in head or '"Note"' in head:
-        if "premium" in head.lower():
+        # only "this is a premium endpoint" is permanent; rate-limit notes also mention "premium plans"
+        if "premium endpoint" in head.lower():
             raise Permanent(f"Alpha Vantage: premium-only endpoint ({params.get('function')})")
         raise ResourceLimited(RESOURCE, _next_reset(), "Alpha Vantage limit reached")
     if '"Error Message"' in head:

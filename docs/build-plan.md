@@ -308,6 +308,8 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
       fades); overreaction rebounds; tested on history for the numeric parts, forward for the AI-read parts. First a
       signal study of `guidance_change` / `release_tone` once ~10k history reads exist (~2 weeks). Also: let the
       evening plan see after-close releases read the same evening (features use the conservative reaction-day rule)
+      and scale EPS surprise by share price (SUE-style) instead of % of the estimate: a −$0.085 → +$0.17 quarter
+      reads as "+300%", which is noise when the estimate is near zero (first live reads, 2026-11-09).
 - [ ] **Pre-earnings predictions:** for companies reporting in the next 2 weeks, Claude gathers news since the last
       report, peers that already reported, analyst changes → beat/miss + reaction with a probability → predictions
       log, scored automatically after the report. Not traded at first (sell-before-earnings rule); calibration report
