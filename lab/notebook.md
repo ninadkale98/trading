@@ -16,3 +16,14 @@ Lessons from trade reviews and experiments, newest last. The idea lab reads this
 - Lesson: Estimate trade count before backtesting; heavily filtered rules can be unable to reach the 100-trade gate within the data available. *(evidence: surprise_near_high stacked nine eligibility conditions and produced 50 trades over 2017-2022, about 8 per year. Reaching 100 at that pace would take roughly 6 more years.; test: Add a pre-backtest count requiring an expected 100 or more trades over the test window. For surprise_near_high, test one preset looser version (for example dist_52w_high >= -0.15) and count it against the multiple-testing bar.)*
 - Lesson: The 'works most years' gate should require a minimum number of qualifying years, since a pass based on two years is weak evidence. *(evidence: surprise_near_high passed with '100% of 2 years'. Only 2017 and 2020 appear to have had enough trades to count, while the other four years had 3 to 8 trades.; test: Require at least 4 qualifying years to pass the gate, otherwise report 'insufficient data'. Re-score all live strategies under this rule.)*
 - Lesson: surprise_near_high still needs its planned robustness and out-of-sample checks; live simulation is too slow to substitute for them. *(evidence: The validate field is null, the backtest years end at 2022, and the promised run with eps_surprise capped at 0.50 does not appear in the results.; test: Run the 0.50-cap version, and run the unchanged rules on 2023 to the present if that data has not been used for development. Pass only if excess vs SPY and vs twin remain positive, and report the t-stats against the current bar.)*
+
+## User idea (2026-11-09): buy the biggest companies after a news-driven one-day drop
+- Idea: when a mega-cap leader (e.g. NVDA on 2026-11-09, −4.3% gap on CEO-scandal news) falls ≥ 4% on company news while
+  the market is calm, buy and hold for weeks; "a company this important always comes back".
+- Quick event study (Claude, 2026-11-09; daily bars 2016+, top 10 common stocks by 60-day dollar volume point-in-time,
+  day ≤ −4% while SPY > −1%; 620 events, 28 stocks): 60 days later avg +3.2% vs SPY but median −0.4% and only 49% beat
+  SPY (a few big winners carry the average); 63% fell a further 10%+ within 60 days. Top 50 instead: 60d avg −1.1% vs
+  SPY, 40% beat. NVDA alone: +7.1%, 60% beat, but NVDA was the decade's best stock (hindsight).
+- To test properly: honest t (overlap), leave-best-year-out, split by news vs no-news drops once 2019+ Haiku labels
+  exist (Chan 2003: news-driven moves tend to drift, no-news moves reverse), split by news type (management/legal vs
+  earnings/guidance), exit when the thesis breaks (e.g. CEO leaves) vs a fixed stop.
