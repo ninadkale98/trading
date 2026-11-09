@@ -329,6 +329,14 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
       briefing and on the dashboard, refreshed every 15 min in market hours from Alpaca's (15-min delayed) bars.
       Data for watching and learning, not a buy signal; trading it waits for the lab's `big_crash_capitulation` test.
 
+- [ ] **Intraday watcher** (user idea, 2026-11-09): an always-on Python loop (no LLM) inside the daemon. Every 1–5
+      min it checks a watchlist (open positions, tomorrow's buys, crash watch): price vs stops and levels, volume
+      surges on 15-min-delayed SIP bars, and new headlines from Alpaca's news stream. Only new headlines on watched
+      names go to Haiku. Actions: alerts, a same-day exit on major bad news for a holding, crash-watch refresh. It
+      also **records intraday bars** for watched names, and Alpaca minute history is fetched around past events, so
+      intraday rules can be tested before any are used. Not a speed race: real-time full-market data is paid (no
+      paid data until a strategy is profitable), and minute-level news reactions are won by firms with faster feeds.
+
 ### 4.2 Operating model: Claude's daily check-in
 - [x] A Claude Code session check-in runs daily ~7:07 pm PT (after the 9:30 pm ET briefing): health, today's outputs
       (lab round, briefing, analysis, errors), fixes, then the next unchecked item above, documented and committed.
