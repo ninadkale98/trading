@@ -40,3 +40,11 @@ Lessons from trade reviews and experiments, newest last. The idea lab reads this
   - **Test this round as a pre-registered candidate** (`big_crash_capitulation`): steady top 20, ≥ 25% below the
     60-day high, heavy-volume down day within 5 days, hold up to 120 days, wide stop (≥ 25%) or none; honest t,
     leave-best-year-out, ≥ 4 years, out-of-sample 2023+. Variants count against the bar.
+- Entry timing (user asked: watch the fall closely, buy when it turns): on the same events, waiting was WORSE on daily
+  bars. Steady top 20, ≥ 25%, heavy volume, all exits at signal + 120 days: buy at the signal close +9.3% vs SPY
+  (median +6.2%, 58% beat); wait for a close above the prior 5 days' high +5.4% (median 0.0%, 51%; worse than buying
+  at once in 74% of pairs); wait for +8% off the low +8.4%; turn + volume calming +6.6% but the fewest "fell 15%+
+  after entry" (41% vs 47%; 34% vs 43% in the ≥ 15% version). So the turn signal gives up the bounce's fast start
+  and barely avoids the losers; volume calming mainly lowers the pain. Lab: test entry A as the main rule, D as a
+  lower-drawdown variant. An intraday (15-min) version needs Alpaca minute history around events; only worth it if
+  the daily version passes.
