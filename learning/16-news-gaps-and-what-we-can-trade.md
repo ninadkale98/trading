@@ -58,4 +58,27 @@ Not as clearly as it looks afterwards. The same morning:
 The news was clearly *bad*, but how much the price would fall, and whether it would keep falling, was not obvious.
 That's why we test it on history instead of trusting a story.
 
+## Do big companies always bounce back after a crash?
+
+This was the user's idea (Nov 2026). The example: Qualcomm went from 147 to 170 in a month. We tested it on 10 years
+of prices. A "crash" here means the stock closed 25% or more below its 60-day high.
+
+| Which stocks | Beat the S&P 500 over 6 months |
+|---|---|
+| Any of the 50 most-traded stocks | about half the time (a coin flip) |
+| Only **steadily big** companies (among the 100 most-traded for 2 years straight) | a bit more than half |
+| Steadily big **+ heavy-volume selling** (a down day with 2× normal volume) | **58%**, about +9% on average |
+
+What it means:
+- **Not "always".** Netflix in Jan 2022 fell another 66% in 6 months, PayPal 56% and Shopify 71%.
+- **"Big" has to mean established.** Hype stocks (Coinbase, AMC, Upstart) make the idea look bad.
+- **Heavy-volume selling helps.** That's **capitulation**: the last panicked sellers give up.
+- **It's still bumpy.** About half fell another 15% first.
+- **Be careful with "the usual price".** Qualcomm traded between 128 and 249 in 2026 alone, so its "usual" price
+  moved a lot. Treating an old price as the right one is called **anchoring**. "Far below its recent high" is a
+  measurable version of the same idea.
+
+Next: the lab tests it as a strategy with fixed rules. Then it's tested on years it wasn't designed on, and finally
+in simulation.
+
 > These notes are for learning. They are not financial advice.

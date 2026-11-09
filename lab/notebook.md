@@ -27,3 +27,16 @@ Lessons from trade reviews and experiments, newest last. The idea lab reads this
 - To test properly: honest t (overlap), leave-best-year-out, split by news vs no-news drops once 2019+ Haiku labels
   exist (Chan 2003: news-driven moves tend to drift, no-news moves reverse), split by news type (management/legal vs
   earnings/guidance), exit when the thesis breaks (e.g. CEO leaves) vs a fixed stop.
+- Follow-up (user, 2026-11-09): "big companies always bounce back after a crash, especially after heavy-volume
+  selling" (example QCOM 147 → 170, Jul → Aug 2026). Crash study (one event per stock per 60 days, daily bars 2016+):
+  - Any top-50 stock by dollar volume: about a coin flip vs SPY (44–51% beat at 120 days); hype names (COIN, UPST,
+    AMC, SE) dominate the losers.
+  - **Steadily big only** (top 100 by dollar volume in ≥ 95% of the last 500 days): better. Top 20, ≥ 25% below the
+    60-day high with a heavy-volume down day (≥ 2× 60-day average volume) in the last 5 days: 77 events, 120d
+    +9.3% vs SPY (median +6.2%, 58% beat). ≥ 35% below: 31 events, 60d +8.8% (65% beat). Without the volume rule:
+    weaker (median +0.7%). 2023–2026 events were positive too, but 2021 was −21%.
+  - Caveats: 12 variants tried (multiple testing), events cluster in 2020 and 2022 (not independent), ~half fell
+    another 15% first, and only ~30% regained the prior high within 6 months.
+  - **Test this round as a pre-registered candidate** (`big_crash_capitulation`): steady top 20, ≥ 25% below the
+    60-day high, heavy-volume down day within 5 days, hold up to 120 days, wide stop (≥ 25%) or none; honest t,
+    leave-best-year-out, ≥ 4 years, out-of-sample 2023+. Variants count against the bar.
