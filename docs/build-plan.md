@@ -398,3 +398,23 @@ matters more. Claude owns this list: build it in order, document as it goes, no 
 | 2026-11-08 | **Lab round 1** (28 min): 4 Opus ideas → `surprise_near_high` live, 3 rejected; Opus's report found 4 flaws in the lab's own measurements → fixed (top-decile basis, Hansen–Hodrick overlap t, leave-best-year-out, ≥ 4 years gate, distinct-version test count) + `lab.baseline` re-test. With honest t: surprise_near_high 2.59 (50 signals), insider_cluster 2.39, relative_strength 2.23, earnings_gap_up 1.53; accumulation / quality_pullback / return_to_average ≈ 0 (kept live for comparison; first to go under the cap). Proposer now max 1 price-only idea per round. Haiku backlog now covers all 2019+ headlines. 61 tests. |
 | 2026-11-08 | **Earnings release reader** (4.1). EDGAR's live 8-K feed (every 20 min) finds item 2.02 releases minutes after filing instead of at the ~10 pm daily index; Haiku reads the masked exhibit 99.1 (names, ticker, executives, links, years hidden) → guidance / tone / numbers → `earnings_reads` + 3 features (reaction-day point-in-time, replaced at the next release). Haiku vs Sonnet on 6 releases: same guidance and tone in 6/6, same numbers, Sonnet found 1 extra adjusted EPS, cost $0.004 vs $0.056 → Haiku for everything. Masking isn't perfect (a former company name survived inside a segment name), so history reads are marked `history`. Estimates only from 2026-11-07 → `rev_surprise` forward only. History backfill started (~40/hour, random order). 67 tests. |
 | 2026-11-09 | **Pre-open news check + weekend news in the briefing** (user: Nvidia fell 4% on Sunday-evening CEO news; why didn't we catch it?). Haiku had labeled it 17 min after it broke (9 negative items by Monday 5:40 am), but (a) nothing showed it: the 6:30 am refresh only listed news from around Friday, (b) no strategy or check used it. The move was entirely in the gap (Fri close 186.7 → first pre-market trade 178.7, flat afterwards), so there was nothing to catch by reading faster. Fixed: briefing major news now runs to the present, one line per stock, biggest companies first; `trading.open` cancels planned buys with importance ≥ 4 bad news since the plan. Also fixed: Alpha Vantage rate-limit notes no longer count as 'premium-only'. learning/16. 67 tests. |
+
+### 4.3 Self-funding ladder (user direction, 2026-11-09)
+The north star: the system earns a modest **real** profit from simple strategies (first target about $200/month),
+and that money buys better data, which makes better strategies. Each step needs evidence; nothing is skipped.
+"Profit" means real dollars **and** beating SPY, so plain market gains don't count as skill.
+
+- [ ] **Step 1, dry run → paper:** recommendation on Wed 2026-11-11 (the user switches the mode).
+- [ ] **Step 2, proof on paper:** at least one strategy (or the whole book) beats SPY after costs over ≥ 3 months forward,
+      with enough trades, and its backtest passed the lab's honest tests. Monthly scorecard: P&L vs SPY, per strategy.
+- [ ] **Step 3, small real money:** the user chooses the amount in the Robinhood MCP account. The system proposes
+      trades; the user approves each one in chat. Track real P&L against the paper twin and against SPY.
+- [ ] **Step 4, reinvest:** when real excess profit has covered a data upgrade's cost for 2–3 months running, propose
+      it with the expected benefit and a test plan; the user decides. Upgrade order (to be revisited):
+      1. real-time full-market prices (Alpaca SIP, about $99/month), needed by the intraday watcher;
+      2. earnings-estimate history (exact surprise for every past quarter);
+      3. transcripts / richer fundamentals.
+- [ ] **Step 5, repeat:** every upgrade must show its value in the lab (better forward results), or it's cancelled.
+- Size math to keep honest: $200/month = $2,400/year. Beating SPY by 5%/year needs about $48k of capital to reach
+  that; on $10k it would take about a 24%/year edge, which is not realistic. So the first real-money phase is about
+  proving the edge, and the dollar target grows with capital.
