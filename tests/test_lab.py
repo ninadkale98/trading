@@ -99,3 +99,29 @@ def test_decision_rules():
     assert decide(_res(vs60=0.0106, t60=0.64))[0] == "admit"                # insider_cluster-like: weak sign of life
     assert decide(_res(ex=0.004, tex=1.3))[0] == "admit"
     assert decide(_res(vs60=-0.01, t60=-1.0, vs20=0.001, t20=0.2))[0] == "reject"
+
+
+def test_overlap_t_deflates_dense_overlap_but_not_sparse_signals():
+    from core.lab.signal_study import t_overlap
+    rng = np.random.default_rng(5)
+    c = np.cumsum(rng.normal(0.0005, 0.01, 1800))
+    f = c[60:] - c[:-60]                                       # overlapping 60-day returns, small true edge
+    dense = t_overlap(f, np.arange(len(f)), 60)
+    naive = f.mean() / (f.std(ddof=1) / np.sqrt(len(f)))
+    assert abs(dense) < abs(naive) / 3                         # heavy overlap → big deflation
+    d = np.arange(0, len(f), 70)                               # signals never overlap
+    sparse = t_overlap(f[d], d, 60)
+    raw = f[d].mean() / (f[d].std(ddof=1) / np.sqrt(len(d)))
+    assert abs(sparse - raw) < 0.05 * abs(raw) + 0.05
+
+
+def test_leave_best_year_out_and_unmeasurable_signal_study():
+    from core.jobs.lab import leave_best_year_out
+    yrs = [{"year": 2019, "trades": 50, "avg_excess": -0.02}, {"year": 2020, "trades": 70, "avg_excess": 0.15},
+           {"year": 2021, "trades": 50, "avg_excess": -0.01}]
+    assert leave_best_year_out(yrs) == pytest.approx(-0.015)
+    r = _res(ex=0.03, tex=1.5)
+    r["backtest"]["by_year"] = yrs
+    assert decide(r)[0] == "reject"                            # one great year doesn't earn admission
+    dec, why = decide(_res())
+    assert dec == "reject" and "could not measure" in why

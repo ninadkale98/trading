@@ -44,13 +44,52 @@ def _t(x: np.ndarray) -> float:
     return float(x.mean() / (x.std(ddof=1) / math.sqrt(len(x)))) if len(x) > 2 and x.std(ddof=1) > 0 else 0.0
 
 
+def t_overlap(x: np.ndarray, days: np.ndarray, h: int) -> float:
+    """t-stat that allows for overlapping holding windows: two signal days closer than h trading days share part of
+    their future returns, so their errors are correlated. Hansen–Hodrick: add the cross-products of every pair of
+    signal days less than h apart (equal weights; the overlap itself already shrinks them with distance), falling
+    back to Bartlett weights if that comes out negative. Dense daily signals get ~√h deflation; rare, spread-out
+    signals barely any. Simulated no-edge data gives t with sd ≈ 1.05–1.1 for both (the old fixed t/√h
+    over-penalised rare signals, lab round 1; Bartlett alone was overconfident, sd ≈ 1.3)."""
+    ok = np.isfinite(x)
+    x, days = x[ok], days[ok]
+    n = len(x)
+    if n < 3:
+        return 0.0
+    e = x - x.mean()
+    var = varb = float(e @ e)
+    for i in range(n):                                   # days are sorted; only neighbours within h matter
+        j = i + 1
+        while j < n and days[j] - days[i] < h:
+            c = 2 * e[i] * e[j]
+            var += c
+            varb += c * (1 - (days[j] - days[i]) / h)
+            j += 1
+    v = var if var > 0 else varb
+    if v <= 0:
+        return 0.0
+    return float(x.mean() / (math.sqrt(v) / n))
+
+
 def study(strategy, m, horizons=HORIZONS, every: int = 1) -> pd.DataFrame:
+    """`basis` = which stocks count as the strategy's signal each day: all it flags (eligible + finite score), or, when
+    it flags ≥ 90% of the eligible pool (a pure ranking rule), its top 10% by score (at least max_new_per_day). Without
+    that switch the 'signal' equals the pool and the comparison is meaningless (lab round 1, rs_wide_leash)."""
     strategy.prepare(m)
     spy = m.col("SPY")
     rows = []
     fwd = {h: forward_returns(m, h) for h in horizons}
+    # decide the basis once, from how much of the pool the strategy flags
+    sample = range(0, len(m.dates) - 1, max(1, (len(m.dates) - 1) // 40))
+    cover = []
+    for t in sample:
+        el = strategy.eligible(t)
+        if el.sum() >= 20:
+            cover.append((el & np.isfinite(strategy.score(t))).sum() / el.sum())
+    basis = "top_decile" if cover and float(np.median(cover)) >= 0.9 else "flagged"
+    k_min = max(int(getattr(strategy, "max_new_per_day", 3)), 1)
     for h in horizons:
-        day_vs_pool, day_vs_spy, n_sig, hits = [], [], 0, []
+        day_vs_pool, day_vs_spy, n_sig, hits, days = [], [], 0, [], []
         for t in range(0, len(m.dates) - h - 1, every):
             el = strategy.eligible(t)
             if not el.any():
@@ -58,6 +97,12 @@ def study(strategy, m, horizons=HORIZONS, every: int = 1) -> pd.DataFrame:
             sc = strategy.score(t)
             sig = el & np.isfinite(sc)
             r = fwd[h][t]
+            if basis == "top_decile" and sig.any():
+                idx = np.flatnonzero(sig)
+                k = max(k_min, len(idx) // 10)
+                top = idx[np.argsort(-sc[idx])[:k]]
+                sig = np.zeros_like(sig)
+                sig[top] = True
             ok_sig, ok_pool = sig & np.isfinite(r), el & np.isfinite(r)
             if not ok_sig.any() or ok_pool.sum() < 20:
                 continue
@@ -66,15 +111,14 @@ def study(strategy, m, horizons=HORIZONS, every: int = 1) -> pd.DataFrame:
             day_vs_spy.append(s_mean - fwd[h][t, spy])
             hits.append((r[ok_sig] > fwd[h][t, spy]).mean())
             n_sig += int(ok_sig.sum())
-        a, b = np.array(day_vs_pool), np.array(day_vs_spy)
-        rows.append({"strategy": strategy.name, "horizon_days": h, "signal_days": len(a), "signals": n_sig,
+            days.append(t)
+        a, b, d = np.array(day_vs_pool), np.array(day_vs_spy), np.array(days)
+        rows.append({"strategy": strategy.name, "horizon_days": h, "basis": basis, "signal_days": len(a), "signals": n_sig,
                      "vs_pool": float(np.nanmean(a)) if len(a) else np.nan, "t_vs_pool": _t(a),
                      "vs_spy": float(np.nanmean(b)) if len(b) else np.nan, "t_vs_spy": _t(b),
-                     "beat_spy_rate": float(np.nanmean(hits)) if hits else np.nan})
-    # overlapping windows (h > 1 day) make neighbouring days' results correlated; a rough correction:
-    out = pd.DataFrame(rows)
-    out["t_vs_pool_adj"] = out["t_vs_pool"] / np.sqrt(out["horizon_days"].clip(lower=1))   # ~h-fold overlap
-    return out
+                     "beat_spy_rate": float(np.nanmean(hits)) if hits else np.nan,
+                     "t_vs_pool_adj": t_overlap(a, d, h)})
+    return pd.DataFrame(rows)
 
 
 def _md(df: pd.DataFrame) -> str:

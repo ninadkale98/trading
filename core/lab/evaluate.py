@@ -11,7 +11,7 @@ Gates for the TRAIN period (fixed before results are seen):
   1. ≥ 100 trades
   2. average excess return per trade > 0 with t ≥ the multiple-testing bar (rises with every backtest ever run)
   3. beats the random twin per trade (difference > 0, t ≥ 2)
-  4. positive average excess in ≥ 60% of years that have ≥ 10 trades
+  4. positive average excess in ≥ 60% of years that have ≥ 10 trades, with at least 4 such years
 """
 from __future__ import annotations
 
@@ -143,7 +143,11 @@ def evaluate(strategy, m: Market, period: str = "train", twin_seeds=(1, 2, 3), s
                                 "need": f"> 0 with t ≥ {t_bar:.2f} ({n_tests} backtests run so far)"},
         "beats_random_twin": {"ok": diff is not None and diff > 0 and t_diff >= 2.0,
                               "value": f"{(diff or 0):+.2%} per trade (t {t_diff:.2f})", "need": "> 0 with t ≥ 2"},
-        "works_most_years": {"ok": good_years >= 0.6, "value": f"{good_years:.0%} of {len(yrs)} years", "need": "≥ 60%"},
+        # ≥ 4 years with ≥ 10 trades each: "100% of 2 years" is not evidence (lab round 1)
+        "works_most_years": {"ok": len(yrs) >= 4 and good_years >= 0.6,
+                             "value": f"{good_years:.0%} of {len(yrs)} years" if len(yrs) >= 4 else
+                                      f"insufficient data ({len(yrs)} years with ≥ 10 trades)",
+                             "need": "≥ 60% of ≥ 4 years"},
     }
     passed = all(g["ok"] for g in gates.values())
     met.update({"twin": twin, "gates": gates, "passed": passed, "excess_vs_twin": diff, "t_vs_twin": t_diff,

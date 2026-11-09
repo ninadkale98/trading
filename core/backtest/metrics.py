@@ -65,7 +65,10 @@ def record(strategy, period: str, metrics: dict, notes: str = "") -> int:
 
 
 def tests_run(strategy_name: str | None = None) -> int:
-    """How many backtests have been run (all ideas, or one strategy): the multiple-testing count."""
+    """How many DIFFERENT ideas have been tested (all, or one strategy): the multiple-testing count. Re-running the same
+    strategy version with the same parameters (e.g. after a measurement fix) is not a new try, so it isn't counted
+    again; any change of version or parameters is."""
+    sql = "SELECT count(DISTINCT (strategy, coalesce(version, ''), params::text)) n FROM backtest_runs"
     if strategy_name:
-        return query("SELECT count(*) n FROM backtest_runs WHERE strategy=%s", (strategy_name,))[0]["n"]
-    return query("SELECT count(*) n FROM backtest_runs")[0]["n"]
+        return query(sql + " WHERE strategy=%s", (strategy_name,))[0]["n"]
+    return query(sql)[0]["n"]

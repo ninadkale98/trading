@@ -445,6 +445,13 @@ Two levels, each feeding the other. The AI proposes and builds; **fixed code** d
 | Retire (decay) | live ≥ 15 closed trades with average excess vs SPY < 0 and t < −1.5 |
 | Retire (cap) | more than 16 live strategies → the one with the weakest evidence (live t-stat after 10 closed trades, else the train t-stat); strategies admitted in the last ~4 weeks are protected |
 
+**Measurement fixes after round 1** (Opus's round report criticized the lab's own tools; all four fixed the same day):
+the signal study uses the strategy's top 10% when it flags ≥ 90% of the pool (otherwise signal = pool, "could not
+measure"); the overlap-adjusted t is Hansen–Hodrick by calendar distance (simulated no-edge sd ≈ 1.05–1.1 for dense
+and rare signals, instead of a fixed t/√h); a backtest only counts as a sign of life if it stays positive without its
+best year; "works most years" needs ≥ 4 years with ≥ 10 trades; the multiple-testing count is distinct strategy
+versions, so re-tests after a tool fix aren't new tries (`lab.baseline` re-tests all live strategies).
+
 **Guards against fooling ourselves:** the sandbox validator (no imports beyond numpy/math/strategy helpers, no
 files/network/dunder/`while`, no index past day t), the runtime look-ahead check (a strategy's day-t answer must not
 change when later days are removed; the same check for features), AI code runs only in a separate process until it

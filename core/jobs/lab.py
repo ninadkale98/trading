@@ -43,7 +43,8 @@ BUILD_TRIES = 3
 # ── fixed decision rules (written before any AI idea was tested) ────────────────────────────────────────────────
 #   reject  : build/test error, look-ahead found, or < 30 signals in 7 years (nothing to learn from)
 #   admit   : "sign of life" in train: signal-study excess vs the pool > 0 with overlap-adjusted t > 0.5 at 20 or 60
-#             days, or backtest excess per trade > 0 with t > 1. Deliberately a LOW bar: the user wants many live
+#             days, or backtest excess per trade > 0 with t > 1 that stays > 0 without its best year (added after
+#             round 1). Deliberately a LOW bar: the user wants many live
 #             experiments (paper money); live results then decide
 #   promote : passed the strict train gates AND the unseen 2023–2024 years → strategies/paper/
 #   retire  : live ≥ 15 closed trades with average excess vs SPY < 0 and t < −1.5, or weakest when over MAX_ACTIVE
@@ -65,12 +66,29 @@ def decide(r: dict) -> tuple[str, str]:
         if (row.get("vs_pool") or 0) > 0 and (row.get("t_vs_pool_adj") or 0) > 0.5:
             life.append(f"{h}d: {row['vs_pool']:+.2%} vs pool (t_adj {row['t_vs_pool_adj']:.2f})")
     bt = r.get("backtest") or {}
-    if (bt.get("avg_excess") or 0) > 0 and (bt.get("t_excess") or 0) > 1:
-        life.append(f"backtest {bt['avg_excess']:+.2%}/trade vs SPY (t {bt['t_excess']:.2f})")
+    lobyo = leave_best_year_out(bt.get("by_year") or [])
+    if (bt.get("avg_excess") or 0) > 0 and (bt.get("t_excess") or 0) > 1 and (lobyo is None or lobyo > 0):
+        life.append(f"backtest {bt['avg_excess']:+.2%}/trade vs SPY (t {bt['t_excess']:.2f}"
+                    + (f", {lobyo:+.2%} without its best year)" if lobyo is not None else ")"))
     if life:
         return "admit", "sign of life: " + "; ".join(life)
     s60 = ss.get(60) or {}
-    return "reject", f"no edge: 60d {(s60.get('vs_pool') or 0):+.2%} vs pool (t_adj {(s60.get('t_vs_pool_adj') or 0):.2f})"
+    if all((row.get("vs_pool") or 0) == 0 for row in ss.values()):
+        return "reject", "signal study could not measure (signals = pool); backtest showed no edge either"
+    return "reject", (f"no edge: 60d {(s60.get('vs_pool') or 0):+.2%} vs pool (t_adj {(s60.get('t_vs_pool_adj') or 0):.2f})"
+                      + (f"; backtest without its best year {lobyo:+.2%}" if lobyo is not None else ""))
+
+
+def leave_best_year_out(by_year: list[dict]) -> float | None:
+    """Average excess per trade after dropping the single best year (one great year can carry a whole backtest:
+    insider_dip_quality, 2020, lab round 1). None if fewer than 3 years."""
+    yrs = [y for y in by_year if (y.get("trades") or 0) > 0 and y.get("avg_excess") is not None]
+    if len(yrs) < 3:
+        return None
+    best = max(yrs, key=lambda y: y["avg_excess"])
+    rest = [y for y in yrs if y is not best]
+    n = sum(y["trades"] for y in rest)
+    return sum(y["avg_excess"] * y["trades"] for y in rest) / n if n else None
 
 
 def live_stats(md: str | None = None) -> dict[str, dict]:
@@ -335,6 +353,32 @@ REPORT_SCHEMA = {"type": "object", "properties": {
         "lesson": {"type": "string"}, "evidence": {"type": "string"}, "suggested_test": {"type": "string"}},
         "required": ["lesson", "evidence", "suggested_test"]}}},
     "required": ["report_md", "lessons"]}
+
+
+@task("lab.baseline", resource="lab", priority=30,
+      description="Re-test every live strategy with the current measurement code (after a lab-tool fix)")
+def baseline(ctx: TaskContext) -> dict:
+    """Same strategy versions, fixed measuring tools: results replace the old ones in `ideas` (hand-written
+    strategies get an ideas row with source='human'). Not new tries, so the multiple-testing count doesn't rise."""
+    from core.strategy.base import load_file
+    live = {n: p for n, (st, p) in strategy_files().items() if st in ("experimental", "paper", "promoted")}
+    have = {r["name"] for r in query("SELECT name FROM ideas")}
+    for name, path in live.items():
+        if name not in have:
+            cls = load_file(path, "experimental")[0]
+            execute("""INSERT INTO ideas (source, name, title, hypothesis, rules, status, code_path)
+                       VALUES ('human', %s, %s, %s, %s, 'live', %s)""",
+                    (name, cls.description[:120], cls.hypothesis or "(none written)", cls.description,
+                     str(path.relative_to(ROOT))))
+    res = _subprocess("test", list(live.values()), timeout=4 * 3600)
+    out = {}
+    for name in live:
+        r = res.get(name, {"ok": False, "error": "no result"})
+        dec, why = decide(r)
+        execute("UPDATE ideas SET results = results || %s, updated_at=now() WHERE name=%s",
+                (json.dumps({"test": r, "baseline_decision": f"{dec}: {why}", "baseline_at": str(date.today())}), name))
+        out[name] = f"{dec}: {why}"
+    return {"summary": f"baseline re-test of {len(live)} live strategies", "decisions": out}
 
 
 @task("lab.cycle", resource="lab", priority=30, description="Idea lab round: propose → build → test → admit/retire → report")
