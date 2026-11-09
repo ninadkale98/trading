@@ -95,7 +95,7 @@ def main() -> None:
     while not STOP.is_set():
         time.sleep(1)
         dead = [t.name for t in threads if not t.is_alive()]
-        if dead:
+        if dead and not STOP.is_set():               # threads also exit on a normal stop (SIGTERM): not an error then
             # Never limp along half-alive: stop, and let launchd (KeepAlive) start a fresh process.
             event("daemon", f"thread(s) died: {', '.join(dead)}; restarting the service", level="error")
             STOP.set()
