@@ -203,8 +203,11 @@ which missing data would unlock better ideas.
 Principles:
 - Learn from the notebook and from every strategy's results: don't repeat failed ideas; vary what showed a sign of
   life; explain the expected mechanism (who is on the other side of the trade and why the edge should persist).
-- Prefer combining evidence the research supports (insider buying, earnings surprise + momentum, news tone, quality,
-  52-week highs, accumulation) over pure price patterns. Mix: some bold, some careful variations.
+- The user's direction: price-only ideas are weak. AT MOST ONE idea per round may use price/volume features alone;
+  every other idea must use non-price evidence: earnings (surprise, reaction, timing), SEC data (fundamentals, insider
+  buying), or news (tone, events). Earnings-driven ideas (post-earnings drift, guidance, reactions) are the priority.
+  Note coverage: news labels exist only for recent weeks (history backtests will see few signals); earnings-surprise
+  history is still sparse; fundamentals and insider data cover 2016+. Mix: some bold, some careful variations.
 - Each idea needs a clear entry rule, a ranking score, a stop, and an exit/holding time. Multi-week horizons.
 - Rules must be computable from the feature arrays at day t only (no future data). No AI judgment inside rules.
 - Names: short snake_case, new (not in the existing list). Hypothesis is written BEFORE testing: say what result would

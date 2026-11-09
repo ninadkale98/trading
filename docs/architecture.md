@@ -401,7 +401,7 @@ recorded: an honest live test.
 **AI judgment can't be backtested honestly.** Claude already knows what happened up to its training date (AMD went up),
 so asking it "would you have picked AMD in 2025?" is look-ahead bias, even if nobody intends it. Rules: **number-based
 patterns** are tested on history; **AI story-based calls** (theme bets, company-map verdicts, Opus predictions) are
-tested **only going forward**, in the predictions log and paper trading.
+tested **only going forward**, in the predictions log and paper trading. Haiku labels on **old** headlines (backfilled 2019+) may carry hindsight, so news-based backtests count as weak evidence until confirmed forward; a word-list tone score is the hindsight-free version for history.
 
 **Lab notebook:** every experiment logs hypothesis, code version, parameters, data period, results,
 verdict and lesson. Opus reads it before proposing the next round, so failures teach the system and are
@@ -799,3 +799,6 @@ The detailed, step-by-step checklist with progress tracking is in **[build-plan.
 | Daily AI budget numbers (research companies/day, Haiku batch frequency) | **Decided (2026-11-08):** no daily caps; the Max plan's own limits are the only limit (§12) |
 | Self-improvement | **Decided (2026-11-08):** two-level loop (§9.1). Strategy lab fully automatic with a low admission bar (paper money, learning first); the system-level engineer builds on a branch and **never merges without the user's OK** |
 | Minimum position size | **Decided:** none; tiny trades are fine while learning |
+| Data purchases | **Decided (2026-11-08):** none for now; history fills slowly with free sources (Alpha Vantage 25/day, Finnhub; Bigdata key kept for rare special cases). Paid data only after a strategy has a proven thesis and profit, funded from that profit (user: "earn a profit first, then reinvest"). Correctness over speed |
+| Direction of research | **Decided (2026-11-08):** non-price evidence first, earnings above all: same-evening release reading, post-earnings drift, pre-earnings predictions scored forward (build plan 4.1) |
+| Who runs the roadmap | **Decided (2026-11-08):** Claude, through a daily check-in session (build plan 4.2); the user gives ideas, Claude executes and documents |

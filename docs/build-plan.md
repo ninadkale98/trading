@@ -290,6 +290,38 @@ daily, and limits/failures defer cleanly.
 
 ---
 
+### 4.1 Earnings engine and richer data (user direction, 2026-11-08)
+The user's direction: price-only ideas are weak; use news, SEC data and especially **earnings** (react the same
+evening, ride the post-earnings drift, predict reports from news and peers, learn how professionals do it) and get
+better at predicting, measured honestly. No rush: history may fill slowly (no paid data for now); doing it right
+matters more. Claude owns this list: build it in order, document as it goes, no reminders needed.
+
+- [x] Lab proposer: at most 1 in 4 ideas price-only; earnings/news/SEC ideas first (core/jobs/lab.py PROPOSER)
+- [x] Haiku reads ALL stored headlines (2019+), newest first, ~1,000/hour (news_triage_backlog `days: 3000`)
+- [ ] **Earnings release reader:** for every 8-K item 2.02 (earnings_events) fetch the press release (exhibit 99.1)
+      from SEC the same evening; Sonnet extracts revenue/EPS vs estimates, guidance raised / kept / cut, tone,
+      one-offs → `earnings_reads` table + features (`guidance_change`, `rev_surprise`, `release_tone`); forward from
+      now, history backfill slowly in spare capacity with company names and dates hidden (look-ahead guard)
+- [ ] **Earnings strategies v2:** post-earnings drift with surprise + guidance + reaction quality (gap that holds vs
+      fades); overreaction rebounds; tested on history for the numeric parts, forward for the AI-read parts
+- [ ] **Pre-earnings predictions:** for companies reporting in the next 2 weeks, Claude gathers news since the last
+      report, peers that already reported, analyst changes → beat/miss + reaction with a probability → predictions
+      log, scored automatically after the report. Not traded at first (sell-before-earnings rule); calibration report
+      monthly; a hold-through-earnings strategy only after ~100 scored predictions look calibrated, with user approval
+- [ ] **Peer read-through study:** first reporter in an industry → later reporters' moves (prices + calendar + sectors)
+- [ ] **News tone for history without look-ahead:** finance word list (Loughran–McDonald style) over 2019+ headlines
+      → backtestable news features; Haiku labels on old headlines are marked "may carry hindsight" (forward tests decide)
+- [ ] **How professionals do it:** research pass (estimate revisions, guidance, call tone, peer data, alternative
+      data) → learning/15 + seed ideas for the lab
+- [ ] Earnings-surprise history keeps filling free (Alpha Vantage 25/day + Finnhub); paid data only after a proven,
+      profitable strategy, funded from its profit (user, 2026-11-08)
+
+### 4.2 Operating model: Claude's daily check-in
+- [x] A Claude Code session check-in runs daily ~7:07 pm PT (after the 9:30 pm ET briefing): health, today's outputs
+      (lab round, briefing, analysis, errors), fixes, then the next unchecked item above, documented and committed.
+      Session-only cron, re-created by the check-in itself before its 7-day expiry. Engineer branches are reviewed
+      there (full diff, tests re-run) and merged if sound; the user is told and can reject.
+
 ## Phase 5: Operate and review
 
 - [ ] Weekly check-ins: briefing quality, approvals, failures, AI usage vs plan limits

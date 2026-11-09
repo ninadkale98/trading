@@ -38,8 +38,8 @@ SCHEDULES: list[dict] = [
     # ── Re-plan step A: news understanding (Haiku) ──
     {"name": "news_triage", "task_type": "news.triage", "cron": "7,37 * * * *", "payload": {"days": 3, "max_items": 2000},
      "priority": 62, "resource": "claude:haiku", "expires_minutes": 25},
-    {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # older news, with leftover daily budget
-     "payload": {"days": 90, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},
+    {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # ALL older news (2019+), newest first,
+     "payload": {"days": 3000, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},  # ~3 weeks
     # ── Re-plan step B: daily market analysis + predictions ──
     {"name": "predictions_score", "task_type": "predictions.score", "cron": f"45 17 * * {WEEKDAYS}",
      "priority": 56, "expires_minutes": 600},
