@@ -43,8 +43,9 @@ def build(day=None) -> tuple[str, str]:
                      ORDER BY coalesce(f.market_cap, 0) DESC""", (day, day, day))
     earn = query("""SELECT u.symbol, u.report_date, u.time_of_day FROM upcoming_earnings u
                     JOIN features_daily f ON f.symbol=u.symbol AND f.date=%s
-                    WHERE u.report_date <= %s::date + 3 AND coalesce(f.market_cap, 0) >= 20e9 ORDER BY u.report_date LIMIT 12""",
-                 (day, day))
+                    WHERE u.report_date > %s::date AND u.report_date <= %s::date + 4   -- next sessions only
+                      AND coalesce(f.market_cap, 0) >= 20e9 ORDER BY u.report_date, f.market_cap DESC LIMIT 12""",
+                 (day, day, day))
 
     unreal = sum(((b["last"] or b["entry_price"]) - b["entry_price"]) * b["shares"] for b in book)
     realized = sum(c["pnl"] or 0 for c in closed)

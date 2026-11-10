@@ -149,6 +149,34 @@ def company_events(f_cik: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(cols).sort_index().ffill()
 
 
+PRICE_X_SHARES = ("market_cap", "pe", "ps", "fcf_yield", "insider_net_buy_90d")
+
+
+def foreign_filers(ciks: list[int]) -> set[int]:
+    """Companies whose latest annual report is a 20-F (foreign private issuers). Their SEC share count is the home
+    market's ordinary shares, while the US listing is usually an ADR worth 1–100+ of them (VOD, AKTX, EC…), so
+    price × shares is wrong. Being a 20-F filer rarely changes, so the current status is used for all dates."""
+    rows = query("""SELECT cik FROM filings WHERE cik = ANY(%s) GROUP BY cik
+                    HAVING max(filed_at) FILTER (WHERE form IN ('20-F', '20-F/A'))
+                           > coalesce(max(filed_at) FILTER (WHERE form IN ('10-K', '10-K/A')), '1900-01-01')""", (ciks,))
+    return {r["cik"] for r in rows}
+
+
+def _blank_foreign_share_counts(m, symbols_cik: dict[str, int], out: dict) -> None:
+    """Blank price × shares features where the share count doesn't match the US listing: (1) 20-F filers; (2) any
+    stock 'worth' over $2B that trades under 0.01% of that a day over 60 days (an ADR of a 10-K filer, e.g. AKTX at
+    "$1.2T"; checked 2026-11-09: no ordinary stock is caught). (2) uses only past bars, so it's point-in-time."""
+    foreign = foreign_filers(sorted({c for c in symbols_cik.values() if c}))
+    cols = [j for j, s in enumerate(m.symbols) if symbols_cik.get(s) in foreign]
+    mc = out["market_cap"]
+    adv = pd.DataFrame(m.dollar_volume).rolling(60, min_periods=20).mean().to_numpy()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        odd = (mc > 2e9) & (adv / mc < 1e-4)
+    for k in PRICE_X_SHARES:
+        out[k][:, cols] = np.nan
+        out[k][odd] = np.nan
+
+
 def compute(m, symbols_cik: dict[str, int]) -> dict[str, np.ndarray]:
     """Fundamental features aligned to the Market's dates × symbols."""
     T, N = m.close.shape
@@ -198,6 +226,7 @@ def compute(m, symbols_cik: dict[str, int]) -> dict[str, np.ndarray]:
             out["debt_to_equity"][:, j] = np.where(eq > 0, g("ltdebt") / eq, np.nan)
     _insiders(m, out)
     _surprise(m, out)
+    _blank_foreign_share_counts(m, symbols_cik, out)
     for k in out:
         out[k][~np.isfinite(out[k])] = np.nan
     return out
