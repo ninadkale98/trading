@@ -281,6 +281,18 @@ didn't say *which* stock or *when*, and obvious stories are often already in the
 **know the story** (themes in the graph), and the system **acts when the story shows up in the numbers**: revenue
 speeding up, guidance raised, estimates rising, the stock starting to beat its sector, volume building.
 
+**Crash watch** (`core/market/crash_watch.py`, in the nightly snapshot as `crash_watch`; user idea 2026-11-09). These
+are steadily big companies: in the top 100 US common stocks by 20-day dollar volume on ≥ 95% of the last 500 trading
+days. The watch lists the ones now ≥ 15% below their 60-day high, showing for each:
+- the latest heavy-volume selling day (a down day on ≥ 2× the prior 60-day average volume, within 10 days);
+- the move since that day;
+- whether volume is calming;
+- whether the stock has turned (a close above the prior 5 closes).
+
+It appears on the dashboard's Market page and in the briefing. It's for watching only. In the 2016–2026 study,
+buying at the heavy-volume day beat waiting for the turn (lab/notebook.md); trading waits for the lab's
+`big_crash_capitulation` test. A 15-minute intraday refresh comes with the intraday watcher (build plan 4.1).
+
 ---
 
 ## 6. Coverage: every stock, every day, without researching every stock every day

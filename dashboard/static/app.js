@@ -154,6 +154,15 @@ const views = {
         <div class="card"><h2>Bonds, commodities, currency, world</h2>${table(gHead.slice(0, 4), [...(m.groups.rates_credit || []), ...(m.groups.commodity_fx || []), ...(m.groups.global || [])].map((r) => `<tr><td><b>${esc(r.symbol)}</b> <span class="small muted">${esc(r.name)}</span></td><td class="num">${p(r.ret_1d)}</td><td class="num">${p(r.ret_5d)}</td><td class="num">${p(r.ret_20d)}</td></tr>`))}</div>
       </div>
       <div class="card" style="margin-top:16px"><h2>Economy</h2><p class="small muted">From FRED. "Before" = a month earlier for daily data, the previous release otherwise.</p>${table(["Measure", "#Latest", "#Before", "#Year ago"], macro)}</div>
+      <div class="card"><h2>Crash watch</h2><p class="small muted">Steadily big companies (top 100 by trading value for ~2 years) now 15%+ below their
+        60-day high. "Heavy selling" = a down day on 2× normal volume in the last 2 weeks; "volume" compares the last 5 days with that week.
+        For watching and learning, not a buy signal: the lab tests the rule first (learning/16).</p>
+        ${table(["Stock", "#Price", "#From 60-day high", "#Day", "Heavy selling", "#Since then", "#Volume", "Turned up"], (m.crash_watch || []).map((x) =>
+          `<tr><td><b>${esc(x.symbol)}</b> <span class="small muted">#${x.rank}</span></td><td class="num">${money(x.close)}</td><td class="num">${p(x.drawdown, 0)}</td>
+           <td class="num">${p(x.ret_1d)}</td><td>${x.heavy_day ? esc(x.heavy_day.slice(5)) + ` <span class="small muted">${num(x.heavy_x, 1)}×</span>` : '<span class="muted">—</span>'}</td>
+           <td class="num">${x.since_heavy == null ? "—" : p(x.since_heavy)}</td>
+           <td class="num">${x.volume_trend < 0.8 ? badge("calming", "good") : x.volume_trend > 1.2 ? badge("heavy", "bad") : badge("steady", "mute")}</td>
+           <td>${x.turned ? badge("yes", "info") : ""}</td></tr>`), "No big company is 15% below its recent high.")}</div>
       <div class="card"><h2>Leaders</h2><p class="small muted">Strongest liquid stocks in uptrends, within 5% of their 52-week high.</p>${table(sHead, stockRows(m.leaders || []), "No stocks meet the leader rules today.")}</div>
       <div class="grid"><div class="card"><h2>Biggest gainers today</h2>${table(sHead, stockRows(m.top_gainers || []))}</div>
         <div class="card"><h2>Biggest losers today</h2>${table(sHead, stockRows(m.top_losers || []))}</div></div>`;

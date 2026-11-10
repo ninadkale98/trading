@@ -78,6 +78,9 @@ What it means:
   moved a lot. Treating an old price as the right one is called **anchoring**. "Far below its recent high" is a
   measurable version of the same idea.
 
+You can watch it live: the **Crash watch** on the dashboard's Market page (and in the briefing) lists every steadily
+big company that's 15%+ below its 60-day high, with its heavy-selling day and whether volume is calming.
+
 Next: the lab tests it as a strategy with fixed rules. Then it's tested on years it wasn't designed on, and finally
 in simulation.
 

@@ -15,6 +15,7 @@ def _p(v, nd=1):
 def build(day=None) -> tuple[str, str]:
     day = day or query("SELECT max(date) d FROM market_snapshot")[0]["d"]
     snap = query("SELECT regime, exposure, data FROM market_snapshot WHERE date=%s", (day,))[0]
+    crash = (snap["data"] or {}).get("crash_watch") or []
     j = query("SELECT summary, watch, lesson FROM market_journal WHERE date=%s", (day,))
     md_ = mode()
     spy = query("""SELECT (data->'groups'->'index'->0->>'ret_1d')::float r1 FROM market_snapshot WHERE date=%s""", (day,))[0]["r1"]
@@ -77,6 +78,10 @@ def build(day=None) -> tuple[str, str]:
             sur = ", ".join(f"{k.split('_')[0]} surprise {r[k]:+.1%}" for k in ("eps_surprise", "rev_surprise") if r[k] is not None)
             L += [f"- **{r['symbol']}** guidance {r['guidance']}, tone {r['tone']:+d}{'; ' + sur if sur else ''}: "
                   f"{(r['guidance_detail'] or '')[:160]}"]
+    if crash:
+        from core.market.crash_watch import lines as crash_lines
+        L += ["", f"**Crash watch** ({len(crash)} steadily big companies 15%+ below their 60-day high; for watching, "
+                  "not a buy signal; biggest falls first):"] + crash_lines(crash, 10)
     L += ["", "## 4. Portfolio" + (" (simulated)" if md_ == "dry_run" else ""),
           "| Stock | Strategy | Since | Entry | Last | P&L | Stop |", "|---|---|---|---|---|---|---|"]
     L += [f"| {b['symbol']} | {b['strategy']} | {b['entry_date']} | {b['entry_price']:.2f} | {(b['last'] or 0):.2f} | "
