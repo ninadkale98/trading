@@ -35,8 +35,14 @@ FEATURES: dict[str, str] = {
     "rs_rank": "Relative-strength rank among all stocks, 1–99 (99 = strongest past-year performance)",
     "beta_250": "Beta: how much it tends to move when SPY moves 1% (1-year)",
     "trend_score": "Uptrend checklist, 0–5: above 50-day, 50-day above 200-day, 200-day rising, above 200-day, within 25% of high",
+    "dist_60d_high": "Distance below the highest close of the last 60 days (0 = at the high; crash watch uses ≤ −15%)",
+    "heavy_sell_age": "Trading days since the last heavy-selling day (a down day on ≥ 2× the prior 60-day average "
+                      "volume): 0 = today; blank if none in the last 10 days",
+    "adv_rank": "Rank by 20-day dollar volume among all common stocks (1 = most traded)",
+    "big_steady_250": "Share of the last 250 trading days this stock was among the 100 most traded (1 = always): "
+                      "'steadily big' companies, not one-off hype",
 }
-INT_FEATURES = {"rs_rank", "trend_score"}
+INT_FEATURES = {"rs_rank", "trend_score", "heavy_sell_age", "adv_rank"}
 
 SECTOR_ETF = {
     "Technology": "XLK", "Healthcare": "XLV", "Financials": "XLF", "Real Estate": "XLRE", "Energy": "XLE",
@@ -106,6 +112,14 @@ def _chunk(close, open_, high, low, volume, dollar_volume, spy_close, bench_clos
     score = sum(c.astype(float) for c in checks)
     out["trend_score"] = score.where(sma[200].notna() & hi.notna())
 
+    # crash features (user idea 2026-11-09, studies in lab/notebook.md; same definitions as core/market/crash_watch.py)
+    out["dist_60d_high"] = _ratio(C, C.rolling(60, min_periods=50).max()) - 1
+    vadj = _ratio(dollar_volume, C)       # split-adjusted shares (raw close × raw volume ÷ adjusted close)
+    heavy = (vadj >= 2 * vadj.shift(1).rolling(60, min_periods=40).mean()) & (r1 < 0)
+    pos = pd.DataFrame(np.where(heavy.to_numpy(), np.arange(len(C))[:, None], np.nan), index=C.index).ffill()
+    age = pd.DataFrame(np.arange(len(C))[:, None] - pos.to_numpy(), index=C.index, columns=C.columns)
+    out["heavy_sell_age"] = age.where(age <= 10)
+
     # input for the cross-sectional rank (computed later across ALL stocks): weighted 3/6/9/12-month returns
     out["_rs_composite"] = (0.4 * (_ratio(C, C.shift(63)) - 1) + 0.2 * (_ratio(C, C.shift(126)) - 1)
                             + 0.2 * (_ratio(C, C.shift(189)) - 1) + 0.2 * (_ratio(C, C.shift(252)) - 1))
@@ -136,4 +150,11 @@ def compute(m, spy_close: np.ndarray, bench_close: np.ndarray | None = None,
     if rank_mask is not None:
         comp.loc[:, ~rank_mask] = np.nan
     res["rs_rank"] = (comp.rank(axis=1, pct=True) * 98 + 1).round().to_numpy(dtype=np.float32)
+    adv = pd.DataFrame(res["adv20"])
+    if rank_mask is not None:
+        adv.loc[:, ~rank_mask] = np.nan
+    rk = adv.rank(axis=1, ascending=False, method="min")
+    res["adv_rank"] = rk.to_numpy(dtype=np.float32)
+    top = (rk <= 100).astype(float).where(rk.notna())
+    res["big_steady_250"] = top.rolling(250, min_periods=240).mean().to_numpy(dtype=np.float32)
     return res

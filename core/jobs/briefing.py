@@ -2,7 +2,7 @@
 reports/daily/YYYY-MM-DD.md). Built from data the system already produced; Opus's analysis supplies the story."""
 from __future__ import annotations
 
-from core.config import ROOT
+from core.config import ROOT, settings
 from core.db import query
 from core.execution.run import mode
 from core.tasks.registry import TaskContext, task
@@ -38,8 +38,13 @@ def build(day=None) -> tuple[str, str]:
                          AND e.importance >= 4 AND NOT coalesce(a.recap,false)
                        ORDER BY e.symbol, e.importance DESC, n.created_at DESC) x
                      ORDER BY cap DESC, importance DESC LIMIT 8""", (day, day, day))   # one line per stock, biggest first
-    reads = query("""SELECT r.symbol, r.guidance, r.tone, r.eps_surprise, r.rev_surprise, r.guidance_detail
+    reads = query("""SELECT r.symbol, r.guidance, r.tone, r.eps_surprise, r.rev_surprise, r.guidance_detail,
+                            coalesce(r.eps_adj, r.eps_gaap) - r.eps_estimate AS eps_beat,
+                            (coalesce(r.eps_adj, r.eps_gaap) - r.eps_estimate) / NULLIF(p.close, 0) AS eps_px
                      FROM earnings_reads r LEFT JOIN features_daily f ON f.symbol=r.symbol AND f.date=%s
+                     LEFT JOIN LATERAL (SELECT close FROM daily_prices d WHERE d.symbol=r.symbol
+                                        AND d.date < (r.accepted_at AT TIME ZONE 'America/New_York')::date
+                                        ORDER BY d.date DESC LIMIT 1) p ON true
                      WHERE r.status='ok' AND r.mode='live' AND r.filed_at BETWEEN %s AND %s::date + 1
                      ORDER BY coalesce(f.market_cap, 0) DESC""", (day, day, day))
     earn = query("""SELECT u.symbol, u.report_date, u.time_of_day FROM upcoming_earnings u
@@ -52,10 +57,13 @@ def build(day=None) -> tuple[str, str]:
     realized = sum(c["pnl"] or 0 for c in closed)
     buys = [p for p in plans if p["side"] == "buy"]
     sells = [p for p in plans if p["side"] == "sell"]
+    _ov = float(settings().get("trading", {}).get("exposure_override") or 0)   # testing override (planner)
     L = [f"# Daily briefing: {day}", "",
          f"*Mode: **{'dry run (simulated trades, no orders)' if md_ == 'dry_run' else 'paper trading (Alpaca practice account)'}***", "",
          "## 1. The day in 5 lines",
-         f"- **Market:** {snap['regime']}. S&P 500 {_p(spy)} today; exposure dial {snap['exposure']:.0%}.",
+         f"- **Market:** {snap['regime']}. S&P 500 {_p(spy)} today; exposure dial {snap['exposure']:.0%}"
+         + (f" (testing: we may invest up to {_ov:.0%} anyway)." if md_ in ("dry_run", "paper") and _ov > snap["exposure"]
+            else "."),
          f"- **Our book:** {len(book)} open positions, unrealized {unreal:+,.0f} USD; closed today: {len(closed)} ({realized:+,.0f} USD).",
          f"- **System:** read {news_n:,} news items; " + ("wrote the market analysis; " if j else "market analysis not written yet; ")
          + f"planned {len(buys)} buys and {len(sells)} exits for the next session.",
@@ -75,7 +83,10 @@ def build(day=None) -> tuple[str, str]:
                   f"lowered {len(g['lowered'])}, withdrawn {len(g['withdrawn'])}."
               + (" Largest companies with a change:" if any(g.values()) else "")]
         for r in (g["raised"] + g["lowered"] + g["withdrawn"])[:8]:
-            sur = ", ".join(f"{k.split('_')[0]} surprise {r[k]:+.1%}" for k in ("eps_surprise", "rev_surprise") if r[k] is not None)
+            # EPS beat in $ and as % of the share price (stable when the estimate is near zero, unlike % of estimate)
+            sur = ", ".join(([f"eps {'+' if r['eps_beat'] >= 0 else '−'}${abs(r['eps_beat']):.2f} vs estimate "
+                              f"({r['eps_px']:+.2%} of price)"] if r["eps_px"] is not None else [])
+                            + ([f"rev surprise {r['rev_surprise']:+.1%}"] if r["rev_surprise"] is not None else []))
             L += [f"- **{r['symbol']}** guidance {r['guidance']}, tone {r['tone']:+d}{'; ' + sur if sur else ''}: "
                   f"{(r['guidance_detail'] or '')[:160]}"]
     if crash:

@@ -35,6 +35,8 @@ FEATURES = {
     "insider_buyers_90d": "Number of different insiders who bought shares on the open market in the last 90 days",
     "insider_net_buy_90d": "Insider open-market buying minus selling over 90 days, as a fraction of market cap",
     "eps_surprise": "Last reported EPS surprise vs analyst estimate (Alpha Vantage), as a fraction",
+    "eps_surprise_px": "Last EPS surprise scaled by share price: (actual − estimate) ÷ the close before the report. "
+                       "Stable when the estimate is near zero, unlike eps_surprise (SUE-style)",
 }
 INT_FEATURES = {"insider_buyers_90d"}
 
@@ -287,8 +289,17 @@ def _insiders(m, out) -> None:
 
 
 def _surprise(m, out) -> None:
-    rows = query("""SELECT symbol, reported_date, surprise_pct FROM earnings_history
-                    WHERE symbol = ANY(%s) AND reported_date <= %s AND surprise_pct IS NOT NULL""",
+    """EPS surprise two ways, both known from the day after the report date (reports come before the open or after the
+    close). `eps_surprise` is % of the estimate (noisy when the estimate is near zero: −$0.085 → +$0.17 reads +300%);
+    `eps_surprise_px` divides the $ surprise by the split-adjusted close before the report. Alpha Vantage EPS history is
+    split-adjusted (NVDA 2019 shows $0.02), so it matches close × adj_factor."""
+    rows = query("""SELECT e.symbol, e.reported_date, e.surprise_pct,
+                           (e.reported_eps - e.estimated_eps) / NULLIF(p.c, 0) AS sue
+                    FROM earnings_history e
+                    LEFT JOIN LATERAL (SELECT close * adj_factor AS c FROM daily_prices d
+                                       WHERE d.symbol = e.symbol AND d.date < e.reported_date
+                                       ORDER BY d.date DESC LIMIT 1) p ON true
+                    WHERE e.symbol = ANY(%s) AND e.reported_date <= %s AND e.surprise_pct IS NOT NULL""",
                  (m.symbols, m.dates[-1].date()))
     if not rows:
         return
@@ -296,7 +307,11 @@ def _surprise(m, out) -> None:
     df["reported_date"] = pd.to_datetime(df["reported_date"])
     col = {s: j for j, s in enumerate(m.symbols)}
     for sym, g in df.groupby("symbol"):
-        s = g.drop_duplicates("reported_date", keep="last").set_index("reported_date")["surprise_pct"].astype(float) / 100
-        # known from the day after the report date (reports come before the open or after the close)
-        s.index = s.index + pd.Timedelta(days=1)
-        out["eps_surprise"][:, col[sym]] = s.reindex(s.index.union(m.dates)).ffill().reindex(m.dates).to_numpy()
+        g = g.drop_duplicates("reported_date", keep="last").set_index("reported_date")
+        g.index = g.index + pd.Timedelta(days=1)
+        idx = g.index.union(m.dates)
+        for key, ser in (("eps_surprise", g["surprise_pct"].astype(float) / 100),
+                         ("eps_surprise_px", pd.to_numeric(g["sue"], errors="coerce").astype(float))):
+            # a report with no value must blank the feature, not carry the previous quarter's forward
+            filled = ser.fillna(-9e9).reindex(idx).ffill().reindex(m.dates).to_numpy()
+            out[key][:, col[sym]] = np.where(filled == -9e9, np.nan, filled)

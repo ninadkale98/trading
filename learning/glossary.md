@@ -26,6 +26,7 @@ The number in brackets is the file with the full explanation.
 | **Candle** | One bar on a chart showing open, high, low and close for a period [4] |
 | **Capex** | Capital expenditure: money spent on factories and equipment [1] |
 | **Capitulation** | A burst of panicked selling on very high volume; sometimes marks the low because the last sellers have given up [16] |
+| **Heavy-selling day** | A down day on at least 2× the normal (60-day average) volume; our crash watch and the lab's crash features look for one [16] |
 | **Cash account** | Can only use your own money, no borrowing [7] |
 | **COGS** | Cost of goods sold: the direct cost of making products [1] |
 | **Consensus estimate** | The average analyst prediction [2] |
@@ -42,6 +43,7 @@ The number in brackets is the file with the full explanation.
 | **Earnings call** | Management's call with analysts after the report [2] |
 | **Earnings report** | Quarterly results: revenue, profit, guidance [2] |
 | **Earnings surprise** | Actual result minus the consensus estimate, as a fraction of the estimate [15] |
+| **SUE (price-scaled surprise)** | The EPS surprise in dollars divided by the share price. Beating a $0.01 estimate by $0.03 is "+300%" of the estimate but only 0.1% of a $30 price; the price-scaled number doesn't blow up when the estimate is near zero [15] |
 | **EDGAR** | The SEC's free website of company filings; it has a live list of new filings [9, 15] |
 | **EMA / SMA** | Exponential / simple moving average [5] |
 | **EPS** | Earnings per share = net income ÷ shares [2] |

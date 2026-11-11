@@ -104,6 +104,10 @@ def plan_day(day: date | None = None) -> dict:
     md = mode()
     day = day or query("SELECT max(date) d FROM features_daily WHERE symbol='SPY'")[0]["d"]
     session = next_session(day)
+    if datetime.now(ET) >= datetime(session.year, session.month, session.day, 9, 15, tzinfo=ET):
+        # that session already started (orders sent / fills being simulated): never replace its plans mid-session
+        return {"summary": f"plan for {session} skipped: the session has started (latest features {day})",
+                "skipped": True, "session": str(session)}
     m = live_market(day)
     t = len(m.dates) - 1
     if m.dates[t].date() != day:
@@ -195,6 +199,7 @@ def plan_day(day: date | None = None) -> dict:
     cfg = settings().get("trading", {})
     max_positions = int(cfg.get("max_positions", 20))
     per_strategy_day = int(cfg.get("max_new_per_strategy_per_day", 2))
+    min_value = float(cfg.get("min_position_value", 1000))
     open_value = {b["symbol"]: b["shares"] * float(m.close[t, m.col(b["symbol"])]) for b in book if b["symbol"] in m._cols}
     sector_of = dict(zip(m.symbols, m.sector))
     used_sector: dict = {}
@@ -234,8 +239,9 @@ def plan_day(day: date | None = None) -> dict:
                     "exposure dial / cash": min(room, acct["cash"] if md == "paper" else room) / price}
             binding = min(caps, key=caps.get)
             final = int(min(shares, *caps.values()))
-            if final < 1:
-                notes.append(f"{name} {cd.symbol}: skipped (size 0 after '{binding}' limit)")
+            if final < 1 or final * price < min_value:     # leftover-money crumbs (e.g. 2 shares, $79) teach nothing
+                notes.append(f"{name} {cd.symbol}: skipped (${final * price:,.0f} after '{binding}' limit; "
+                             f"minimum ${min_value:,.0f})")
                 continue
             value = final * price
             plans.append(dict(strategy=name, symbol=cd.symbol, side="buy", shares=final,

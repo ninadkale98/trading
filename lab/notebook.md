@@ -40,6 +40,11 @@ Lessons from trade reviews and experiments, newest last. The idea lab reads this
   - **Test this round as a pre-registered candidate** (`big_crash_capitulation`): steady top 20, ≥ 25% below the
     60-day high, heavy-volume down day within 5 days, hold up to 120 days, wide stop (≥ 25%) or none; honest t,
     leave-best-year-out, ≥ 4 years, out-of-sample 2023+. Variants count against the bar.
+    **Features for it (added 2026-11-10):** `dist_60d_high` (≤ −0.25), `heavy_sell_age` (≤ 5 = a heavy-volume down
+    day within 5 trading days), `adv_rank` (1 = most traded) and `big_steady_250` (share of the last 250 days in the
+    top 100; ≥ 0.95 = steadily big). The study used a 500-day window for "steady"; the feature uses 250 days, so
+    "steady top 20" ≈ `big_steady_250 ≥ 0.95` and `adv_rank ≤ 20`. Also new: `eps_surprise_px` (EPS surprise ÷ price,
+    stable when the estimate is near zero), a candidate replacement for `eps_surprise` in surprise_near_high.
 - Entry timing (user asked: watch the fall closely, buy when it turns): on the same events, waiting was WORSE on daily
   bars. Steady top 20, ≥ 25%, heavy volume, all exits at signal + 120 days: buy at the signal close +9.3% vs SPY
   (median +6.2%, 58% beat); wait for a close above the prior 5 days' high +5.4% (median 0.0%, 51%; worse than buying

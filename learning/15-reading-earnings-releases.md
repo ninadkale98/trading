@@ -46,6 +46,11 @@ The **outlook** is new information about the future, and it moves prices most. W
    It must answer only from the text.
 4. **Measure the surprise ourselves.** The **surprise** is actual minus expected (the **consensus estimate**). We take
    the estimate from our own daily calendar snapshot taken *before* the release, not from Claude. So nothing can leak.
+
+   We show the EPS surprise two ways. **As % of the estimate** is the usual headline, but it blows up when the
+   estimate is near zero: beating −$0.085 with +$0.17 reads "+300%". **As % of the share price** (professionals
+   call it SUE-style) stays sensible: a $0.21 beat on a $78 stock is +0.27%. The briefing shows the dollar beat and
+   the % of price; the feature `eps_surprise_px` stores it for strategies.
 5. **Turn it into numbers strategies can use:**
    - `release_tone` (−2…+2);
    - `guidance_change` (+1 raised, −1 lowered or withdrawn, 0 otherwise);
