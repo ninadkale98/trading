@@ -88,6 +88,17 @@ def account() -> dict:
     return {"equity": float(a["equity"]), "cash": float(a["cash"]), "peak": peak, "positions": pos}
 
 
+def _exposure_limit(dial: float, md: str) -> float:
+    """How much of equity may be invested. While strategies are being tested (dry_run / paper), the user chose to
+    invest up to `trading.exposure_override` (1.0) whatever the dial says (2026-11-10), so the dial doesn't starve
+    the test of trades. The dial is still computed and recorded, so its value can be measured later. Real money will
+    follow the dial unless decided otherwise."""
+    override = settings().get("trading", {}).get("exposure_override")
+    if override is not None and md in ("dry_run", "paper"):
+        return float(override)
+    return dial
+
+
 def plan_day(day: date | None = None) -> dict:
     L = limits()
     md = mode()
@@ -98,7 +109,8 @@ def plan_day(day: date | None = None) -> dict:
     if m.dates[t].date() != day:
         raise RuntimeError(f"prices end {m.dates[t].date()}, expected {day}")
     snap = query("SELECT exposure, regime FROM market_snapshot WHERE date=%s", (day,))
-    exposure = float(snap[0]["exposure"]) if snap else 0.5
+    dial = float(snap[0]["exposure"]) if snap else 0.5
+    exposure = _exposure_limit(dial, md)
     acct = account()
     equity = acct["equity"]
     book = query("SELECT * FROM positions_book WHERE status='open' AND mode=%s", (md,))
@@ -128,6 +140,9 @@ def plan_day(day: date | None = None) -> dict:
                 n_cand += 1
 
     plans, notes = [], []
+    if exposure != dial:
+        notes.append(f"exposure: the market dial says {dial:.0%}; testing override invests up to {exposure:.0%} "
+                     f"(settings trading.exposure_override)")
     # ── exits and stop updates for open positions ──
     # Earnings: sell before the report unless the strategy is built to hold through it. An exit planned tonight fills at
     # the next open, so a report before the open of the session after that (or any time sooner) means exit now.
@@ -261,6 +276,6 @@ def _save(day, session, md, plans, notes, n_cand, exposure) -> dict:
     buys = [p for p in plans if p["side"] == "buy"]
     sells = [p for p in plans if p["side"] == "sell"]
     return {"summary": f"plan for {session} ({md}): {len(buys)} buys (${sum(p['position_value'] for p in buys):,.0f}), "
-                       f"{len(sells)} exits, from {n_cand} candidates; exposure dial {exposure:.0%}"
+                       f"{len(sells)} exits, from {n_cand} candidates; may invest up to {exposure:.0%}"
                        + (f"; {len(notes)} notes" if notes else ""),
             "session": str(session), "buys": len(buys), "sells": len(sells), "candidates": n_cand, "notes": notes}

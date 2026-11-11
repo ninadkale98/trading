@@ -538,6 +538,12 @@ If it says 75% but wins 55%, its probabilities are corrected and its bet sizes s
 | Mixed | ~50% |
 | Falling or panicking | 20–30%, mostly cash |
 
+**While testing (dry run and paper), the dial doesn't limit buying** (user's decision 2026-11-10: "we are anyway
+testing strategies"). The planner may invest up to `trading.exposure_override` (100%). The dial is still computed
+and recorded every day, so we can measure later whether following it would have helped. Real money follows the dial
+unless decided otherwise. Why: the dial flipped 50% → 95% → 50% on Fri–Mon–Tue on a one-vote change and blocked
+every new buy, which starves the strategy test of trades.
+
 **Market sleeve (decided: yes):** when the market is healthy but there aren't enough good picks, unused money
 sits in SPY instead of cash, so the account rides broad rallies. When good picks appear, SPY is sold to fund
 them; when the dial turns down, SPY is cut first. Picks are always scored separately against SPY.

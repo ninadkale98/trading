@@ -41,6 +41,11 @@ trading:
   max_positions: 20
   max_new_per_strategy_per_day: 2
   entry_limit_above_close: 0.01   # buy limit = yesterday's close + 1% (don't chase big gaps)
+  # Max share of equity invested while TESTING (dry_run/paper), whatever the market dial says. User's decision
+  # 2026-11-10: "we are anyway testing strategies", so more trades = faster answers. The dial is still computed and
+  # recorded (market_snapshot.exposure) so we can measure later whether following it would have helped.
+  # null = follow the dial.
+  exposure_override: 1.0
 
 ai:
   # Optional daily caps per model, in pay-per-use-equivalent dollars. Empty = NO cap (user's decision 2026-11-08: the
