@@ -115,11 +115,16 @@ def atr_stop(price: float, atr_pct: float, mult: float = 2.0, floor: float = 0.0
     return price * (1 - dist)
 
 
+OVERDUE_DAYS = 21
+
+
 def earnings_clear(f, t: int, days: int = 14) -> np.ndarray:
-    """Entry filter (architecture §10.4): True where no report is due within ~10 trading days (14 calendar days)."""
+    """Entry filter (architecture §10.4): True where no report is due within ~10 trading days (14 calendar days).
+    A negative value means the ESTIMATED date (last report + 91 days) has passed with no report seen: the report is
+    probably late, not done (SLN, Nov 2026: estimated Nov 9, reported Nov 12), so up to 21 days overdue is not clear."""
     d = f["days_to_earnings_est"][t]
     with np.errstate(invalid="ignore"):
-        return ~(np.isfinite(d) & (d >= 0) & (d <= days))
+        return ~(np.isfinite(d) & (d >= -OVERDUE_DAYS) & (d <= days))
 
 
 class RandomTwin(FeatureStrategy):

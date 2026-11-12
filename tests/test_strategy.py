@@ -71,3 +71,11 @@ def test_strategy_files_load():
     assert {"quality_pullback", "earnings_gap_up", "earnings_overreaction", "return_to_average", "accumulation",
             "relative_strength"} <= names
     assert all(s.description and s.hypothesis for s in load("experimental"))
+
+
+def test_earnings_clear_blocks_overdue_reports():
+    from core.strategy.base import earnings_clear
+    d = np.array([[np.nan, 30, 14, 3, 0, -1, -21, -22]], dtype=np.float32)
+    ok = earnings_clear({"days_to_earnings_est": d}, 0)
+    # unknown, far away and long-overdue are clear; due soon, today, or recently overdue (probably late) are not
+    assert ok.tolist() == [True, True, False, False, False, False, False, True]

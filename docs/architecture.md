@@ -550,7 +550,8 @@ them; when the dial turns down, SPY is cut first. Picks are always scored separa
 
 ### 10.4 Entry filter (all required)
 Calibrated chance of success ≥ threshold (start ~60%, raise as the system proves itself) · reward/risk ≥ 1.5–2 ·
-positive expected value after costs · no earnings within 10 trading days (unless the strategy is about earnings) ·
+positive expected value after costs · no earnings within 10 trading days (unless the strategy is about earnings;
+a report up to 21 days past its estimated date with none seen counts as still due, since it is probably late) ·
 sized to its liquidity tier (§3; emerging names need manual approval).
 
 ### 10.5 Sizing and limits: two tiers
