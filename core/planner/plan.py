@@ -206,10 +206,11 @@ def plan_day(day: date | None = None, md: str | None = None) -> dict:
         new_stop = b["stop"]
         if b["trail_pct"]:
             new_stop = max(b["stop"], high * (1 - b["trail_pct"]))
+        new_stop = round(new_stop, 2)
         if new_stop > b["stop"] + 1e-6 or high > (b["high_close"] or 0):
             with conn() as c:
-                c.execute("UPDATE positions_book SET stop=%s, high_close=%s WHERE id=%s", (round(new_stop, 2), high, b["id"]))
-            if new_stop > b["stop"] + 1e-6:
+                c.execute("UPDATE positions_book SET stop=%s, high_close=%s WHERE id=%s", (max(new_stop, b["stop"]), high, b["id"]))
+            if new_stop > round(b["stop"], 2) + 1e-6:      # no "raised 23.01 → 23.01" notes
                 notes.append(f"{b['symbol']}: trailing stop raised {b['stop']:.2f} → {new_stop:.2f}")
 
     # ── circuit breaker ──
@@ -223,17 +224,21 @@ def plan_day(day: date | None = None, md: str | None = None) -> dict:
     max_positions = int(cfg.get("max_positions", 20))
     per_strategy_day = int(cfg.get("max_new_per_strategy_per_day", 2))
     min_value = float(cfg.get("min_position_value", 1000))
-    open_value = {b["symbol"]: b["shares"] * float(m.close[t, m.col(b["symbol"])]) for b in book if b["symbol"] in m._cols}
+    # positions sold at tomorrow's open (planned exits above) free their slot and money for tomorrow's buys, which
+    # fill at the same open (until 2026-11-12 they still counted, so SLN's sale left a slot unused)
+    exiting = {p["symbol"] for p in plans if p["side"] == "sell"}
+    staying = [b for b in book if b["symbol"] not in exiting]
+    open_value = {b["symbol"]: b["shares"] * float(m.close[t, m.col(b["symbol"])]) for b in staying if b["symbol"] in m._cols}
     sector_of = dict(zip(m.symbols, m.sector))
     used_sector: dict = {}
     used_strategy: dict = {}
-    for b in book:
+    for b in staying:
         v = open_value.get(b["symbol"], 0)
         used_sector[sector_of.get(b["symbol"])] = used_sector.get(sector_of.get(b["symbol"]), 0) + v
         used_strategy[b["strategy"]] = used_strategy.get(b["strategy"], 0) + v
     invested = sum(open_value.values())
     room = max(0.0, exposure * equity - invested)
-    slots = max_positions - len(book)
+    slots = max_positions - len(staying)
     adv = m.f["adv20"][t]
     planned_syms = set()
     # strategies take turns (one pick each per round) so no single idea fills the book
