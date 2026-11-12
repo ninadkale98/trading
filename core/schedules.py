@@ -45,7 +45,10 @@ SCHEDULES: list[dict] = [
      "priority": 64, "resource": "sec", "expires_minutes": 18},
     {"name": "earnings_read_catchup", "task_type": "earnings.read", "cron": f"50 22 * * {WEEKDAYS}",   # after sec.daily
      "priority": 63, "resource": "claude:haiku", "expires_minutes": 600},
-    {"name": "earnings_read_history", "task_type": "earnings.read_history", "cron": "20 * * * *",   # ~40/hour, random order
+    # ~40/hour, random order. Not 4-9 am or 8-9 pm ET (2026-11-12): the backfill used most of the Max plan's 5-hour
+    # window and news triage hit the limit 3 times overnight; those hours keep room for pre-open triage + the 9:20
+    # news check and the 9 pm Opus analysis.
+    {"name": "earnings_read_history", "task_type": "earnings.read_history", "cron": "20 0-3,10-19,22,23 * * *",
      "payload": {"max_items": 40}, "priority": 18, "resource": "claude:haiku", "expires_minutes": 55},
     # ── Re-plan step B: daily market analysis + predictions ──
     {"name": "predictions_score", "task_type": "predictions.score", "cron": f"45 17 * * {WEEKDAYS}",
