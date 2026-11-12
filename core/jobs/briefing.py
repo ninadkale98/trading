@@ -12,6 +12,20 @@ def _p(v, nd=1):
     return "—" if v is None else f"{v * 100:+.{nd}f}%"
 
 
+def _shadow_line(day, md_: str) -> str:
+    """In paper mode the dry-run book keeps running beside it (execution.run.books); one line so it isn't invisible."""
+    from core.execution.run import books
+    if md_ == "dry_run" or "dry_run" not in books():
+        return ""
+    r = query("""SELECT count(*) n, coalesce(sum((p.close - b.entry_price) * b.shares), 0) u FROM positions_book b
+                 LEFT JOIN LATERAL (SELECT close FROM daily_prices WHERE symbol=b.symbol AND date<=%s
+                                    ORDER BY date DESC LIMIT 1) p ON true
+                 WHERE b.mode='dry_run' AND b.status='open'""", (day,))[0]
+    tot = query("SELECT coalesce(sum(pnl), 0) s FROM positions_book WHERE mode='dry_run' AND status='closed'")[0]["s"]
+    return (f" Shadow dry run (same plans, simulated): {r['n']} open, unrealized {float(r['u']):+,.0f} USD, "
+            f"closed so far {float(tot):+,.0f} USD.")
+
+
 def build(day=None) -> tuple[str, str]:
     day = day or query("SELECT max(date) d FROM market_snapshot")[0]["d"]
     snap = query("SELECT regime, exposure, data FROM market_snapshot WHERE date=%s", (day,))[0]
@@ -64,7 +78,8 @@ def build(day=None) -> tuple[str, str]:
          f"- **Market:** {snap['regime']}. S&P 500 {_p(spy)} today; exposure dial {snap['exposure']:.0%}"
          + (f" (testing: we may invest up to {_ov:.0%} anyway)." if md_ in ("dry_run", "paper") and _ov > snap["exposure"]
             else "."),
-         f"- **Our book:** {len(book)} open positions, unrealized {unreal:+,.0f} USD; closed today: {len(closed)} ({realized:+,.0f} USD).",
+         f"- **Our book:** {len(book)} open positions, unrealized {unreal:+,.0f} USD; closed today: {len(closed)} ({realized:+,.0f} USD)."
+         + _shadow_line(day, md_),
          f"- **System:** read {news_n:,} news items; " + ("wrote the market analysis; " if j else "market analysis not written yet; ")
          + f"planned {len(buys)} buys and {len(sells)} exits for the next session.",
          f"- **Needs you:** {len(appr)} approval request(s)." if appr else "- **Needs you:** nothing today.",

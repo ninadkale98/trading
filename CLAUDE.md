@@ -16,7 +16,8 @@ add new concepts to `learning/` (keep `learning/glossary.md` in sync).
 ## The running system (daemon + dashboard)
 - Dashboard: http://ichigo:8090 (Tailscale) or localhost:8090. Status: `.venv/bin/tradebot status`, `tradebot plan`.
 - Trading mode is `config/settings.yaml → trading.mode` (`dry_run` = simulated against real prices, `paper` = Alpaca PAPER
-  orders). Switch to `paper` only when the user says so.
+  orders). Switch to `paper` only when the user says so. In paper mode the dry-run book keeps running beside it (shadow,
+  `trading.shadow_dry_run`), so the switch orphans nothing.
 - **Approvals in chat:** when the user says "approve #3", "approve #3 half size" or "reject #3", run
   `.venv/bin/tradebot approve 3 [--size 0.5] [--comment "..."]` / `tradebot reject 3`. List with `tradebot approvals`.
 - **Self-improving loop** (docs/architecture.md §9.1, learning/14): `lab.cycle` Sun 12:00 + Wed 23:00 ET is automatic

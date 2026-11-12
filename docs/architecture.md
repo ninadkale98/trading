@@ -637,6 +637,12 @@ The system handles routine, rule-following work alone and **escalates anything u
 - **Alpaca paper account** ($100,000 practice balance, kept as is), fully automatic, inside the risk rules.
 - Orders: limit entries as **bracket orders** (entry + stop-loss + take-profit together); trailing stops for runners.
 - Paper fills are optimistic, so the journal subtracts an estimated cost for slippage and spread.
+- **Shadow dry run** (`execution.run.books`, settings `trading.shadow_dry_run`, default on): in paper mode the dry-run
+  book keeps running beside the paper book. Same strategies and rules, its own simulated account (`dry_run_start_equity`
+  $100k + closed P&L + open positions at the close; `planner.plan.dry_run_account`), settled, planned and news-checked
+  each day. Thin stocks that need approval are only asked about in the paper plan, so the shadow skips them. Purpose: no
+  orphaned dry-run positions at the switch, a continuous forward test, and simulated-vs-real fills on the same plans
+  (how optimistic the simulator and therefore the backtests are). The briefing shows it in one line. Added 2026-11-11.
 - **Pre-open news check** (9:20 am, `execution.run.news_check`, both modes): a planned buy whose stock got a major
   negative news label (Haiku importance ≥ 4, not a price recap) after the plan's 4 pm cutoff is cancelled, with the
   headline as the reason (kept in `trade_plans` for skipped-vs-taken comparisons). Open positions with such news are

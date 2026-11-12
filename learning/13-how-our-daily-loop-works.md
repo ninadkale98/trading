@@ -19,6 +19,10 @@ All times are New York time (ET). Everything runs by itself on ichigo. The dashb
   **forward test**: nobody knew the future when the plan was made.
 - **Paper:** the same plans become real orders in the Alpaca **practice** account ($100,000 of pretend money). Fills
   and slippage are more realistic. Switched on only when you say so.
+- **Shadow book:** once paper is on, the dry run doesn't stop. It keeps running beside paper with its own pretend
+  $100,000, planned by the same rules. Two reasons: the positions it already holds keep their stops and exits, and
+  comparing the two books shows how much better the simulator's fills look than real orders. If the simulator turns
+  out to be too kind, every backtest is too kind by about the same amount.
 - **Real money:** never automatic. Every real order needs your explicit OK for that order.
 
 ## How a trade is sized (the planner)

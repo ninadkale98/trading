@@ -188,6 +188,16 @@ def mode() -> str:
     return settings().get("trading", {}).get("mode", "dry_run")
 
 
+def books() -> list[str]:
+    """The books to run each day, active one first. In paper mode the dry-run book keeps running beside it ("shadow",
+    settings trading.shadow_dry_run, default on): its 19+ open positions keep their stops and exits, the forward test
+    stays continuous, and the same plans simulated vs really filled show how optimistic the simulator is."""
+    md = mode()
+    if md != "dry_run" and settings().get("trading", {}).get("shadow_dry_run", True):
+        return [md, "dry_run"]
+    return [md]
+
+
 
 # ── before the open: major bad news since the plan was made ─────────────────────────────────────────────────────
 # The evening plan only sees news up to that day's 4 pm close. If Haiku later labels a major negative item for a stock
@@ -203,8 +213,8 @@ _BAD_NEWS = """SELECT n.headline, e.importance FROM news_events e JOIN news n ON
                ORDER BY e.importance DESC, n.created_at DESC LIMIT 1"""
 
 
-def news_check(today: date) -> dict:
-    md, skipped, flagged = mode(), [], []
+def news_check(today: date, md: str | None = None) -> dict:
+    md, skipped, flagged = md or mode(), [], []
     for p in query("""SELECT id, symbol, signal_date FROM trade_plans WHERE trade_date=%s AND mode=%s AND side='buy'
                       AND status IN ('planned', 'waiting_approval')""", (today, md)):
         bad = query(_BAD_NEWS, (p["symbol"], NEWS_VETO_IMPORTANCE, p["signal_date"]))

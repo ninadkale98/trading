@@ -88,6 +88,21 @@ def account() -> dict:
     return {"equity": float(a["equity"]), "cash": float(a["cash"]), "peak": peak, "positions": pos}
 
 
+def dry_run_account(day: date, close_of) -> dict:
+    """The dry-run book's own money: start (trading.dry_run_start_equity, $100k like the paper account) + closed P&L
+    + open positions at today's close. Until 2026-11-11 dry run borrowed the paper account's numbers, which only worked
+    while paper sat idle at $100k; with paper trading live the two books must not share one account."""
+    start = float(settings().get("trading", {}).get("dry_run_start_equity", 100000))
+    realized = float(query("SELECT coalesce(sum(pnl), 0) s FROM positions_book WHERE mode='dry_run' AND status='closed'")[0]["s"])
+    cost = value = 0.0
+    for b in query("SELECT symbol, shares, entry_price FROM positions_book WHERE mode='dry_run' AND status='open'"):
+        px = close_of(b["symbol"])
+        cost += b["shares"] * float(b["entry_price"])
+        value += b["shares"] * (px if px is not None else float(b["entry_price"]))
+    equity = start + realized + value - cost
+    return {"equity": equity, "cash": equity - value, "peak": max(start, equity), "positions": {}}
+
+
 def _exposure_limit(dial: float, md: str) -> float:
     """How much of equity may be invested. While strategies are being tested (dry_run / paper), the user chose to
     invest up to `trading.exposure_override` (1.0) whatever the dial says (2026-11-10), so the dial doesn't starve
@@ -99,9 +114,10 @@ def _exposure_limit(dial: float, md: str) -> float:
     return dial
 
 
-def plan_day(day: date | None = None) -> dict:
+def plan_day(day: date | None = None, md: str | None = None) -> dict:
     L = limits()
-    md = mode()
+    md = md or mode()
+    shadow = md == "dry_run" and mode() != "dry_run"     # the dry-run book running beside paper (run.books)
     day = day or query("SELECT max(date) d FROM features_daily WHERE symbol='SPY'")[0]["d"]
     session = next_session(day)
     if datetime.now(ET) >= datetime(session.year, session.month, session.day, 9, 15, tzinfo=ET):
@@ -115,7 +131,14 @@ def plan_day(day: date | None = None) -> dict:
     snap = query("SELECT exposure, regime FROM market_snapshot WHERE date=%s", (day,))
     dial = float(snap[0]["exposure"]) if snap else 0.5
     exposure = _exposure_limit(dial, md)
-    acct = account()
+    if md == "dry_run":
+        def _close(sym):
+            j = m._cols.get(sym)
+            v = float(m.close[t, j]) if j is not None else float("nan")
+            return v if np.isfinite(v) else None
+        acct = dry_run_account(day, _close)
+    else:
+        acct = account()
     equity = acct["equity"]
     book = query("SELECT * FROM positions_book WHERE status='open' AND mode=%s", (md,))
     held = {b["symbol"] for b in book} | set(acct["positions"]) if md == "paper" else {b["symbol"] for b in book}
@@ -242,6 +265,9 @@ def plan_day(day: date | None = None) -> dict:
             if final < 1 or final * price < min_value:     # leftover-money crumbs (e.g. 2 shares, $79) teach nothing
                 notes.append(f"{name} {cd.symbol}: skipped (${final * price:,.0f} after '{binding}' limit; "
                              f"minimum ${min_value:,.0f})")
+                continue
+            if shadow and tier == "emerging":     # only the paper plan asks you; the shadow book doesn't buy unasked
+                notes.append(f"{name} {cd.symbol}: skipped in the shadow dry run (thin stock needs your approval)")
                 continue
             value = final * price
             plans.append(dict(strategy=name, symbol=cd.symbol, side="buy", shares=final,

@@ -40,6 +40,7 @@ The number in brackets is the file with the full explanation.
 | **Dividend (ex-date)** | Cash paid per share; the price drops by about that amount on the ex-dividend date [9] |
 | **Dividend / Yield** | Cash paid to shareholders / that cash as a % of the price [3] |
 | **Downgrade / Upgrade** | Analyst lowers / raises their rating [6] |
+| **Dry run** | Our plans simulated against real next-day prices, no orders sent: a forward test [13] |
 | **Earnings call** | Management's call with analysts after the report [2] |
 | **Earnings report** | Quarterly results: revenue, profit, guidance [2] |
 | **Earnings surprise** | Actual result minus the consensus estimate, as a fraction of the estimate [15] |
@@ -85,6 +86,7 @@ The number in brackets is the file with the full explanation.
 | **Overnight trading** | Trading between the evening and the 4 am pre-market on special venues; thin, and prices often already adjust there [16] |
 | **P/B** | Price ÷ book value [3] |
 | **P/E** | Price ÷ last-12-month EPS: dollars paid per $1 of yearly profit [3] |
+| **Paper trading** | Real orders in a practice account with pretend money (our Alpaca $100k) [13] |
 | **PEG** | P/E ÷ growth rate [3] |
 | **Position sizing** | Deciding how much to buy so one loss stays small [7] |
 | **Post-earnings drift** | Prices keep moving in the direction of an earnings surprise for weeks afterwards [12, 15] |
@@ -113,6 +115,7 @@ The number in brackets is the file with the full explanation.
 | **Self-improving loop** | Propose → test → keep what works → learn → propose better; each turn uses the last one's lessons [14] |
 | **Settlement (T+1)** | Sale cash becomes usable 1 business day later [7] |
 | **Shares outstanding** | All shares that exist [3] |
+| **Shadow book** | The dry run kept running beside paper trading, to compare simulated vs real fills [13] |
 | **Short selling** | Borrowing shares and selling them, hoping to buy back cheaper later; profits when the price falls. Our system doesn't short [16] |
 | **SIC code** | The SEC's industry code for a company, mapped to our 11 sectors [9] |
 | **Signal study** | Do the stocks a rule picks beat the average stock over the next weeks? No stops or exits involved [14] |
