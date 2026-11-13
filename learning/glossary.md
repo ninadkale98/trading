@@ -10,6 +10,7 @@ The number in brackets is the file with the full explanation.
 | **Adjusted (non-GAAP)** | Results with "one-time" items removed by the company [1] |
 | **Adjusted price** | Price history rewritten so splits and dividends don't look like price moves [9] |
 | **ADV** | Average daily dollar volume: how much money trades per day [9] |
+| **Admission veto** | Lab rule: an idea whose picks did no better than its random twin, or that lost to SPY, isn't admitted even with a "sign of life" [14] |
 | **After-hours** | Trading from 4–8 pm ET; earnings reactions start here [4] |
 | **Analyst rating** | Buy / Hold / Sell opinion from a bank or research firm [6] |
 | **Anchoring** | Treating a past price as the 'right' price ("QCOM is usually 170"), even though the 'usual' price keeps moving [16] |

@@ -72,14 +72,24 @@ def _log(purpose, model, ok, usage, cost, ms, error=None, task_id=None):
         pass
 
 
-_LIMIT = re.compile(r"usage limit|rate limit|limit reached|too many requests|overloaded|quota|credit balance", re.I)
-_RESET = re.compile(r"resets? (?:at )?(\d{1,2})(?::(\d{2}))?\s*(am|pm)", re.I)
+# "You've hit your 5-hour limit · resets 12:40am (America/Los_Angeles)" (Nov 2026 wording) must match too: before it
+# did, a limit counted as an ordinary error and used up a task's retries (the 2026-11-12 Opus analysis failed that way).
+_LIMIT = re.compile(r"usage limit|rate limit|limit reached|hit your .{0,20}limit|\d+-hour limit|weekly limit|"
+                    r"too many requests|overloaded|quota|credit balance", re.I)
+_RESET = re.compile(r"resets? (?:at )?(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s*\(([A-Za-z_]+/[A-Za-z_]+)\))?", re.I)
 
 
 def _limit_until(msg: str) -> datetime:
-    """Parse 'resets 3pm' style hints; otherwise wait an hour."""
+    """Parse 'resets 3pm' / 'resets 12:40am (America/Los_Angeles)' hints (the time is in the named zone, else ET);
+    otherwise wait an hour."""
     m = _RESET.search(msg or "")
-    now = datetime.now(ET)
+    tz = ET
+    if m and m.group(4):
+        try:
+            tz = ZoneInfo(m.group(4))
+        except Exception:        # unknown zone name: assume ET
+            pass
+    now = datetime.now(tz)
     if m:
         h = int(m.group(1)) % 12 + (12 if m.group(3).lower() == "pm" else 0)
         t = now.replace(hour=h, minute=int(m.group(2) or 0), second=0, microsecond=0)

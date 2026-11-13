@@ -46,6 +46,11 @@ BUILD_TRIES = 3
 #             days, or backtest excess per trade > 0 with t > 1 that stays > 0 without its best year (added after
 #             round 1). Deliberately a LOW bar: the user wants many live
 #             experiments (paper money); live results then decide
+#   veto    : (added 2026-11-13, after round 2 admitted 2 ideas that met their own written "proven wrong" rules) the low
+#             bar above is not enough on its own. With ≥ 30 backtest trades, an idea is rejected if its actual trading
+#             rules (entries AND exits) did no better than random picks with the same exits (excess vs twin ≤ 0) or
+#             lost to SPY per trade. A signal-study "sign of life" vs the pool must also be > 0 vs SPY at that horizon
+#             (2016–2022's average stock lagged SPY, so "beats the pool" alone can be a loser vs the index)
 #   promote : passed the strict train gates AND the unseen 2023–2024 years → strategies/paper/
 #   retire  : live ≥ 15 closed trades with average excess vs SPY < 0 and t < −1.5, or weakest when over MAX_ACTIVE
 
@@ -60,12 +65,16 @@ def decide(r: dict) -> tuple[str, str]:
         return "reject", f"only {n} signals in 2016–2022: too rare to learn from"
     if r.get("passed_train"):
         return "validate", "passed the strict train gates → test on unseen 2023–2024"
+    bt = r.get("backtest") or {}
+    veto = admission_veto(bt)
+    if veto:
+        return "reject", veto
     life = []
     for h in (20, 60):
         row = ss.get(h) or {}
-        if (row.get("vs_pool") or 0) > 0 and (row.get("t_vs_pool_adj") or 0) > 0.5:
-            life.append(f"{h}d: {row['vs_pool']:+.2%} vs pool (t_adj {row['t_vs_pool_adj']:.2f})")
-    bt = r.get("backtest") or {}
+        if (row.get("vs_pool") or 0) > 0 and (row.get("t_vs_pool_adj") or 0) > 0.5 and (row.get("vs_spy") or 0) > 0:
+            life.append(f"{h}d: {row['vs_pool']:+.2%} vs pool (t_adj {row['t_vs_pool_adj']:.2f}), "
+                        f"{row['vs_spy']:+.2%} vs SPY")
     lobyo = leave_best_year_out(bt.get("by_year") or [])
     if (bt.get("avg_excess") or 0) > 0 and (bt.get("t_excess") or 0) > 1 and (lobyo is None or lobyo > 0):
         life.append(f"backtest {bt['avg_excess']:+.2%}/trade vs SPY (t {bt['t_excess']:.2f}"
@@ -77,6 +86,24 @@ def decide(r: dict) -> tuple[str, str]:
         return "reject", "signal study could not measure (signals = pool); backtest showed no edge either"
     return "reject", (f"no edge: 60d {(s60.get('vs_pool') or 0):+.2%} vs pool (t_adj {(s60.get('t_vs_pool_adj') or 0):.2f})"
                       + (f"; backtest without its best year {lobyo:+.2%}" if lobyo is not None else ""))
+
+
+VETO_MIN_TRADES = 30
+
+
+def admission_veto(bt: dict) -> str | None:
+    """Reason to reject despite a "sign of life", or None. Only with enough backtest trades to mean something."""
+    n = bt.get("trades") or 0
+    if n < VETO_MIN_TRADES:
+        return None
+    twin, spy = bt.get("excess_vs_twin"), bt.get("avg_excess")
+    if twin is not None and twin <= 0:
+        return (f"veto: in {n} backtest trades its picks did no better than random picks with the same exits "
+                f"({twin:+.2%}/trade vs its random twin, t {(bt.get('t_vs_twin') or 0):.2f})")
+    if spy is not None and spy < 0:
+        return (f"veto: in {n} backtest trades its actual rules lost to SPY ({spy:+.2%}/trade, "
+                f"t {(bt.get('t_excess') or 0):.2f})")
+    return None
 
 
 def leave_best_year_out(by_year: list[dict]) -> float | None:

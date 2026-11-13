@@ -24,6 +24,11 @@ Sunday 12:00 and Wednesday 11 pm (New York time):
    - Any **sign of life** (picks beat the average stock, even weakly) → it goes **live** in our dry run / paper account
      at a small size (0.5% risk per trade). The bar is low on purpose: it's practice money, and live results are the
      real test.
+   - **Except** (added after round 2): if the full backtest had 30+ trades and its picks did no better than the
+     **random twin** (random stocks, same exits), or its actual rules lost to SPY per trade, it is rejected anyway.
+     A sign of life also has to beat SPY, not just the average stock. Why: round 2 let in two ideas that had already
+     failed the "proven wrong if…" tests they wrote down before testing. A low bar is fine; a bar that ignores your
+     own failed tests is not.
    - Passes the strict gates *and* still works on 2023–2024, years it never saw → promoted to `paper/`.
    - No edge, too few signals, or errors → **retired**. The file is kept so the same idea isn't tried again blindly.
    - More than 16 live strategies → the one with the weakest evidence is retired. A strategy that loses against SPY

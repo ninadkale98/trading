@@ -3,6 +3,11 @@
 within this window; otherwise that run is skipped. Jobs are added here as each phase is built."""
 
 WEEKDAYS = "1-5"
+# Hours (ET) when the two big AI backfills run: old news triage (~18k items/day) and old earnings releases (~40/hour).
+# Together they are ~95% of AI use and share the Max plan's 5-hour limit with everything else. Off 4-9 am and 4-9 pm
+# so the 5 hours before the 9:20 news check and before the 9 pm Opus analysis are free of backfill (2026-11-13: the
+# limit ran out 4 times in 24 h and the 11-12 analysis failed).
+BACKFILL_HOURS = "0-3,10-15,22,23"
 
 SCHEDULES: list[dict] = [
     # ── Phase 1: data ──────────────────────────────────────────────────────────────
@@ -38,17 +43,15 @@ SCHEDULES: list[dict] = [
     # ── Re-plan step A: news understanding (Haiku) ──
     {"name": "news_triage", "task_type": "news.triage", "cron": "7,37 * * * *", "payload": {"days": 3, "max_items": 2000},
      "priority": 62, "resource": "claude:haiku", "expires_minutes": 25},
-    {"name": "news_triage_backlog", "task_type": "news.triage", "cron": "50 * * * *",   # ALL older news (2019+), newest first,
-     "payload": {"days": 3000, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},  # ~3 weeks
+    {"name": "news_triage_backlog", "task_type": "news.triage", "cron": f"50 {BACKFILL_HOURS} * * *",   # ALL older news
+     "payload": {"days": 3000, "max_items": 1000}, "priority": 20, "resource": "claude:haiku", "expires_minutes": 55},
     # ── Earnings release reader (build plan 4.1): live 8-K feed → Haiku reads the press release ──
     {"name": "sec_earnings_poll", "task_type": "sec.earnings_poll", "cron": f"*/20 6-21 * * {WEEKDAYS}",   # chains earnings.read
      "priority": 64, "resource": "sec", "expires_minutes": 18},
     {"name": "earnings_read_catchup", "task_type": "earnings.read", "cron": f"50 22 * * {WEEKDAYS}",   # after sec.daily
      "priority": 63, "resource": "claude:haiku", "expires_minutes": 600},
-    # ~40/hour, random order. Not 4-9 am or 8-9 pm ET (2026-11-12): the backfill used most of the Max plan's 5-hour
-    # window and news triage hit the limit 3 times overnight; those hours keep room for pre-open triage + the 9:20
-    # news check and the 9 pm Opus analysis.
-    {"name": "earnings_read_history", "task_type": "earnings.read_history", "cron": "20 0-3,10-19,22,23 * * *",
+    # ~40/hour, random order, only in BACKFILL_HOURS (see there).
+    {"name": "earnings_read_history", "task_type": "earnings.read_history", "cron": f"20 {BACKFILL_HOURS} * * *",
      "payload": {"max_items": 40}, "priority": 18, "resource": "claude:haiku", "expires_minutes": 55},
     # ── Re-plan step B: daily market analysis + predictions ──
     {"name": "predictions_score", "task_type": "predictions.score", "cron": f"45 17 * * {WEEKDAYS}",

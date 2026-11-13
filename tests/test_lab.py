@@ -86,10 +86,12 @@ def test_lookahead_check_passes_honest_and_catches_cheater():
     assert problems and "score() differs" in problems[0]
 
 
-def _res(vs20=0.0, t20=0.0, vs60=0.0, t60=0.0, n=500, passed=False, ex=0.0, tex=0.0, ok=True):
+def _res(vs20=0.0, t20=0.0, vs60=0.0, t60=0.0, n=500, passed=False, ex=0.0, tex=0.0, ok=True, spy20=None, spy60=None):
     return {"ok": ok, "passed_train": passed, "backtest": {"avg_excess": ex, "t_excess": tex},
-            "signal_study": [{"horizon_days": 20, "signals": n, "vs_pool": vs20, "t_vs_pool_adj": t20},
-                             {"horizon_days": 60, "signals": n, "vs_pool": vs60, "t_vs_pool_adj": t60}]}
+            "signal_study": [{"horizon_days": 20, "signals": n, "vs_pool": vs20, "t_vs_pool_adj": t20,
+                              "vs_spy": vs20 if spy20 is None else spy20},
+                             {"horizon_days": 60, "signals": n, "vs_pool": vs60, "t_vs_pool_adj": t60,
+                              "vs_spy": vs60 if spy60 is None else spy60}]}
 
 
 def test_decision_rules():
@@ -99,6 +101,26 @@ def test_decision_rules():
     assert decide(_res(vs60=0.0106, t60=0.64))[0] == "admit"                # insider_cluster-like: weak sign of life
     assert decide(_res(ex=0.004, tex=1.3))[0] == "admit"
     assert decide(_res(vs60=-0.01, t60=-1.0, vs20=0.001, t20=0.2))[0] == "reject"
+
+
+def test_admission_veto_round_2():
+    """Round 2 (2026-11-11) admitted big_crash_capitulation and rs_earnings_confirmed although they met their own
+    written kill rules; the veto rejects them and keeps sue_drift_loose."""
+    crash = _res(vs20=0.014, t20=0.97, spy20=-0.001, vs60=-0.032, t60=-1.1)
+    crash["backtest"] = {"trades": 57, "avg_excess": -0.0359, "t_excess": -1.2, "excess_vs_twin": -0.0115, "t_vs_twin": -0.3}
+    dec, why = decide(crash)
+    assert dec == "reject" and "random twin" in why
+    rs = _res(vs60=0.011, t60=0.91, spy60=0.0013)
+    rs["backtest"] = {"trades": 786, "avg_excess": -0.0012, "t_excess": -0.21, "excess_vs_twin": 0.0037}
+    dec, why = decide(rs)
+    assert dec == "reject" and "lost to SPY" in why
+    sue = _res(vs60=0.0596, t60=3.39)
+    sue["backtest"] = {"trades": 88, "avg_excess": 0.0356, "t_excess": 2.44, "excess_vs_twin": 0.0299}
+    assert decide(sue)[0] == "admit"
+    assert decide(_res(vs20=0.014, t20=0.97, spy20=-0.001))[0] == "reject"      # beats the pool but not SPY
+    few = _res(vs60=0.02, t60=1.0)
+    few["backtest"] = {"trades": 12, "avg_excess": -0.05, "excess_vs_twin": -0.02}
+    assert decide(few)[0] == "admit"                    # too few backtest trades to veto on
 
 
 def test_overlap_t_deflates_dense_overlap_but_not_sparse_signals():

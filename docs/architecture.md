@@ -487,6 +487,7 @@ Two levels, each feeding the other. The AI proposes and builds; **fixed code** d
 |---|---|
 | Reject | build/test error, look-ahead found, or < 30 signals in 2016–2022 |
 | Admit to live (experimental, 0.5% risk per trade) | "sign of life" in train: signal-study excess vs the eligible pool > 0 with overlap-adjusted t > 0.5 at 20 or 60 days, or backtest excess per trade > 0 with t > 1. **A low bar on purpose** (user's choice: many live experiments on paper money; live results decide) |
+| Veto (added 2026-11-13) | with ≥ 30 backtest trades, rejected despite a sign of life if its picks did no better than its random twin (excess vs twin ≤ 0) or its actual rules lost to SPY per trade; a signal-study sign of life must also be > 0 vs SPY at that horizon. Applies to new ideas from round 3; the strategies already live are the user's call (7 of the 8 original ones would fail it) |
 | Promote to `paper/` | passed the strict train gates AND the unseen 2023–2024 years |
 | Retire (decay) | live ≥ 15 closed trades with average excess vs SPY < 0 and t < −1.5 |
 | Retire (cap) | more than 16 live strategies → the one with the weakest evidence (live t-stat after 10 closed trades, else the train t-stat); strategies admitted in the last ~4 weeks are protected |
@@ -669,7 +670,12 @@ The system handles routine, rule-following work alone and **escalates anything u
   catch-up chapters, case studies) instead of going to waste. Overflow option: pay-per-use API (Haiku is cheap).
 - **No daily caps (user decision, 2026-11-08).** Background jobs use the plan freely; the plan's own 5-hour and
   weekly limits are the only limit. When Claude reports a usage limit, that model's queue pauses until the reset
-  time (ResourceLimited) and resumes by itself. Usage is still metered per call in `ai_usage`. Optional per-model
+  time (ResourceLimited) and resumes by itself; the reset time is read in the time zone the message names
+  ("resets 12:40am (America/Los_Angeles)"). Usage is still metered per call in `ai_usage`.
+- **Backfill hours (2026-11-13).** The two big backfills (old news triage ~18k items/day, old earnings releases
+  ~40/hour) are ~95% of AI use. They run only 10 am–4 pm and 10 pm–4 am ET (`BACKFILL_HOURS` in core/schedules.py),
+  so the 5 hours before the 9:20 am news check and before the 9 pm Opus analysis are free of them. All models and the
+  user's own Claude Code sessions share one 5-hour limit. Optional per-model
   daily caps remain available in `settings.yaml → ai.daily_budget_usd_equiv` if the user ever wants them back.
 - Every Claude output is checked against a schema before it's written to the database.
 - Optional fallback: if Opus is still blocked hours later, Sonnet writes the daily summary, labeled as such.
@@ -685,7 +691,7 @@ The system handles routine, rule-following work alone and **escalates anything u
 | 6:00–9:30 am | Overnight news loaded and triaged, pre-market gaps |
 | **9:15 am** | **Approval deadline** for today's trades; unanswered requests default to "no trade" |
 | 9:30 am – 4:00 pm | Every 15–30 min: news, watchlist prices, tripwires, order and stop management |
-| 6:00 am – 9:40 pm, every 20 min | EDGAR live 8-K feed → new earnings releases read by Haiku (§7.1); 10:50 pm catch-up after the daily index; hourly: history reads in spare capacity |
+| 6:00 am – 9:40 pm, every 20 min | EDGAR live 8-K feed → new earnings releases read by Haiku (§7.1); 10:50 pm catch-up after the daily index; history reads hourly in backfill hours only (§14) |
 | 4:30 pm | Daily bars for all stocks → features → **market snapshot** (breadth, rotation, cross-asset) → strategies → planner → tomorrow's plan |
 | 5:30–8:00 pm | **Sonnet research queue**, knowledge-map updates |
 | **9:00 pm** | **Opus daily summary, daily market analysis and new ideas** → market journal, reports, predictions log, lab queue |
